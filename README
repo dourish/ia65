@@ -1,0 +1,3 @@
+ia65 is an interactive assembler for the Mite 6502 project. I've been
+doing my assembly work via a cross-assembler but now I want a self-
+hosted assembler to run on the Mite board itself.

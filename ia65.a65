@@ -1,0 +1,277 @@
+#include "../mitemon/decl.a65"
+
+SCRATCH    = $0010  ; through to $001F
+PRINTVEC   = $0042  ; and $0043. for printing routine.
+INPUT      = $0200  ; block out this page for monitor command input
+
+  * = $0300
+
+#include "../mitemon/init.a65"
+
+init_acia
+  lda #%00001011                ;No parity, no echo, no interrupt
+  sta ACIA_COMMAND
+  lda #%00011111                ;1 stop bit, 8 data bits, 19200 baud
+  sta ACIA_CONTROL
+
+  lda #<greeting
+  sta PRINTVEC
+  lda #>greeting
+  sta PRINTVEC+1
+  jsr printvecstr
+
+crnextline
+  jsr crlf
+
+nextline
+;; read line
+  jsr readline
+
+  lda INPUT
+  cmp #"X
+  bne processline
+  jsr crlf
+  jmp end
+
+processline
+  ;; find first non-space character
+  ldy #0
+nextchar
+  lda INPUT,y
+  beq nextline
+  cmp #$20
+  beq space
+  cmp #$09          ; tab
+  bne nonspace
+space
+  iny
+  bra nextchar  
+
+nonspace
+  cmp #';
+  beq crnextline    ; skip comments to end of line
+
+;; find opcode
+  lda #<opcodes
+  sta SCRATCH
+  lda #>opcodes
+  sta SCRATCH+1
+  clc
+  tya
+  adc #<INPUT
+  sta SCRATCH+2
+  lda #>INPUT
+  adc #0
+  sta SCRATCH+3 
+
+testentry
+  lda (SCRATCH)
+  beq endoftable
+
+  ldy #0
+  lda (SCRATCH),y
+  cmp (SCRATCH+2),y
+  bne nextentry
+  iny
+  lda (SCRATCH),y
+  cmp (SCRATCH+2),y
+  bne nextentry
+  iny
+  lda (SCRATCH),y
+  cmp (SCRATCH+2),y
+  beq foundmatch
+nextentry
+  clc
+  lda SCRATCH
+  adc #15
+  sta SCRATCH
+  bcc skip
+  inc SCRATCH+1
+skip
+  bra testentry
+
+foundmatch
+  lda #"Y
+  jsr puta
+  jsr crlf
+  jmp nextline
+
+endoftable
+;; not an opcode, so perhaps a label?
+  lda #"N
+  jsr puta
+  jsr crlf
+  jmp nextline
+
+;; look up opcode in table
+
+;; error if not found
+
+end
+  rts
+
+;; decode addressing mode
+;; is there nothing? -> IMP
+;; is there #? -> IMM
+;; is there A? -> ACC
+;; is there (? -> parencode
+;; single byte? -> single
+;; is there ,X? -> ABSX
+;; is there ,Y? -> ABSY
+
+single
+;; does this instruction take a REL? -> REL
+;; is there ,X? -> ZPX
+;; is there ,Y? -> ZPY
+;; does this instruction take ZP? -> ZP
+;; ERROR
+
+parencode
+;; is there ,Y? -> INDY
+;; is there ,X)? -> INDX
+;; ERROR
+
+
+;; identify IMP
+;; identify IMM ("#")
+;; identify ZP
+;; identify ZPX
+;; identify ZPY
+;; identify ABSX (no paren, commaX)
+;; identify ABSY (no paren, commaY)
+;; identify INDX (paren,X)
+;; identity INDY (paren),Y
+;; identify ACC
+;; identify REL
+
+
+
+
+
+;; utility routines
+puta
+.(
+  pha
+wait_txd_empty
+  lda ACIA_STATUS
+  and #$10
+  beq wait_txd_empty
+  pla
+  sta ACIA_DATA
+.)
+  rts
+
+
+putax
+.(
+  phy
+
+  pha
+wait_txd_empty
+  lda ACIA_STATUS
+  and #$10
+  beq wait_txd_empty
+  pla
+  pha             ; put a copy back
+  clc
+  and #$f0
+  ror
+  ror
+  ror
+  ror
+  tay
+  lda hextable,y
+  sta ACIA_DATA
+wait_txd_empty2
+  lda ACIA_STATUS
+  and #$10
+  beq wait_txd_empty2
+  pla
+  clc
+  and #$0f
+  tay
+  lda hextable,y
+  sta ACIA_DATA
+.)
+  ply
+  rts
+
+;;; read a line of input from the serial interface
+;;; leaves data in the buffer at INPUT
+;;; y is the number of characters in the line, so it will fail if
+;;; more then 255 characters are entered
+;;; line terminated by carriage return. backspaces processed internally.
+;;;
+readline
+  ldy #0
+readchar
+.(
+wait_rxd_full    
+  lda ACIA_STATUS
+  and #$08
+  beq wait_rxd_full
+.)
+  lda ACIA_DATA
+  cmp #$08           ; check for backspace
+  beq backspace
+  cmp #$0D           ; check for newline
+  beq done
+  sta INPUT,y        ; track the input
+  iny
+  jsr puta           ; echo the typed character
+  jmp readchar       ; loop to repeat
+backspace
+  cpy #0             ; beginning of line?
+  beq readchar
+  dey                ; if not, go back one character
+  jsr puta           ; move cursor back
+  jmp readchar
+
+  ;; this is where we land if the line input has finished
+  ;;
+done
+  rts
+
+crlf
+  pha
+.(
+wait_txd_empty
+  lda ACIA_STATUS
+  and #$10
+  beq wait_txd_empty
+.)
+  lda #$0d
+  sta ACIA_DATA
+.(
+wait_txd_empty
+  lda ACIA_STATUS
+  and #$10
+  beq wait_txd_empty
+.)
+  lda #$0a
+  sta ACIA_DATA
+  pla
+  rts
+
+printvecstr
+  ldy #0
+.(
+next_char
+wait_txd_empty  
+  lda ACIA_STATUS
+  and #$10
+  beq wait_txd_empty
+  lda (PRINTVEC),y
+  beq endstr
+  sta ACIA_DATA
+  iny
+  bra next_char
+endstr
+.)
+  rts
+
+hextable:        .byte "0123456789ABCDEF"
+greeting:	 .byte "Interactive Assembler for Mite 6502", $0d, $0a, $00
+
+#include "tables.a65"
+

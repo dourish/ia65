@@ -1,0 +1,13 @@
+
+opcodes
+; each record is 15 bytes long.
+;     OPC    IMM  ZP   ZPX  ZPY, ABS  ABSX ABSY INDX INDY ACC  IMP  REL  
+.byte "LDA", $a9, $a5, $b5, $ff, $ad, $bd, $b9, $a1, $44, $ff, $ff, $ff
+.byte "LDX", $a2, $a6, $ff, $b6, $ae, $ff, $be, $ff, $ff, $ff, $ff, $ff
+.byte "LSR", $ff, $46, $56, $ff, $4e, $5e, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "BEQ", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $f0
+.byte "JSR", $ff, $ff, $ff, $ff, $20, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "RTS", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $60, $ff
+.byte $00
+
+
