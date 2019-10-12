@@ -173,17 +173,32 @@ nonspace
 ;; decode the parameter. we should end up with two things -- an 8- or
 ;; 16-bit value, and an indication of the addressing mode.
 
-;; if we got nothing, it's implied
+;; if we got nothing, it's implied or accumulator, depending on
+;; the instruction.
 .(
   lda (SCRATCH+2)
   bne next
-  ldy #I_IMP
+
+  ldy #I_IMP        ; try implied mode
+  lda (SCRATCH),y
+  cmp #$ff
+  bne done
+
+  lda #I_ACC        ; try accumulator mode
+  lda (SCRATCH),y
+  cmp #$ff
+  beq done
+
+  jmp error
+
+done
   sty AMODE
   jmp gotmode
+
 next
 .)
 
-;; insructions that have a relative addressing mode have ONLY that
+;; instructions that have a relative addressing mode have ONLY that
 ;; mode
 .(
   ldy #I_REL
@@ -206,6 +221,13 @@ next
   jmp gotmode
 next
 .)
+
+  lda (SCRATCH)
+  cmp #"(
+  beq parenmodes
+
+
+parenmodes
 
 ;; error
   lda #$FF
