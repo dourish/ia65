@@ -1,8 +1,25 @@
+
+;;; IA65 is an interactive assembler for the 65C02 processor, with
+;;; the goal of being self-hosted.
+;;;
+;;; The starting point is something that will assemble line-by-
+;;; line, and then after that, something that can also read
+;;; from an SD card as if it were terminal input.
+;;;
+;;; It is written for the Mite 6502 single-board computer.
+;;; http://www.dourish.com/projects/mite.html
+;;;
+;;; Paul Dourish, October 2019
+;;;
+
+
+
 #include "../mitemon/decl.a65"
 
 SCRATCH    = $0010  ; through to $001F
 PRINTVEC   = $0042  ; and $0043. for printing routine.
 INPUT      = $0200  ; block out this page for monitor command input
+AMODE      = $02FF
 
   * = $0300
 
@@ -24,8 +41,9 @@ crnextline
   jsr crlf
 
 nextline
-;; read line
-  jsr readline
+  jsr readline      ; read a line to INPUT
+  lda #0            ; terminate with a NUL
+  sta INPUT,y
 
   lda INPUT
   cmp #"X
@@ -34,8 +52,10 @@ nextline
   jmp end
 
 processline
+
   ;; find first non-space character
   ldy #0
+.(
 nextchar
   lda INPUT,y
   beq nextline
@@ -46,12 +66,14 @@ nextchar
 space
   iny
   bra nextchar  
-
 nonspace
+.)
+
+  ;; found non-space character
   cmp #';
   beq crnextline    ; skip comments to end of line
 
-;; find opcode
+  ;; find opcode
   lda #<opcodes
   sta SCRATCH
   lda #>opcodes
@@ -68,33 +90,33 @@ testentry
   lda (SCRATCH)
   beq endoftable
 
+  ;; opcodes are only three characters long, so we unroll this
+  ;; rather than implement it as a loop.
   ldy #0
-  lda (SCRATCH),y
+  lda (SCRATCH),y   ; first character
   cmp (SCRATCH+2),y
   bne nextentry
   iny
-  lda (SCRATCH),y
+  lda (SCRATCH),y   ; second character
   cmp (SCRATCH+2),y
   bne nextentry
   iny
-  lda (SCRATCH),y
+  lda (SCRATCH),y   ; third character
   cmp (SCRATCH+2),y
   beq foundmatch
+
+  ;; no entry found, so move on to the next table entry
 nextentry
   clc
   lda SCRATCH
-  adc #15
+  adc #15           ; table entries are 15 bytes long
   sta SCRATCH
+.(
   bcc skip
   inc SCRATCH+1
 skip
+.)
   bra testentry
-
-foundmatch
-  lda #"Y
-  jsr puta
-  jsr crlf
-  jmp nextline
 
 endoftable
 ;; not an opcode, so perhaps a label?
@@ -103,9 +125,104 @@ endoftable
   jsr crlf
   jmp nextline
 
-;; look up opcode in table
-
 ;; error if not found
+error
+  jmp end
+
+
+foundmatch
+;  lda #"Y
+;  jsr puta
+;  jsr crlf
+;  jmp nextline
+
+
+  clc
+  lda SCRATCH+2
+  adc #3
+  sta SCRATCH+2
+.(
+  bcc skip
+  inc SCRATCH+3
+skip
+.)
+
+  ;; skip spaces to find operand
+  ldy #0
+.(
+nextchar
+  lda (SCRATCH+2),y
+  beq nonspace
+  cmp #$20
+  beq space
+  cmp #$09
+  bne nonspace
+space
+  iny
+  bra nextchar
+nonspace
+.)
+  clc               ; update pointer to start of operand text
+  tya
+  adc SCRATCH+2
+  sta SCRATCH+2
+  lda SCRATCH+3
+  adc #0
+  sta SCRATCH+3
+
+;; decode the parameter. we should end up with two things -- an 8- or
+;; 16-bit value, and an indication of the addressing mode.
+
+;; if we got nothing, it's implied
+.(
+  lda (SCRATCH+2)
+  bne next
+  ldy #I_IMP
+  sty AMODE
+  jmp gotmode
+next
+.)
+
+;; insructions that have a relative addressing mode have ONLY that
+;; mode
+.(
+  ldy #I_REL
+  lda (SCRATCH),y
+  cmp #$ff
+  beq next
+
+  sty AMODE
+  jmp gotmode
+next
+.)
+
+.(
+  lda (SCRATCH+2)
+  cmp #"#
+  bne next
+
+  ldy #I_IMM
+  sty AMODE
+  jmp gotmode
+next
+.)
+
+;; error
+  lda #$FF
+  sta AMODE
+
+
+gotmode
+  ldy AMODE
+  lda #32
+  jsr puta
+  lda (SCRATCH),y
+  jsr putax
+  lda #32
+  jsr puta
+
+  jsr crlf
+  jmp nextline
 
 end
   rts
@@ -148,7 +265,12 @@ parencode
 
 
 
-;; utility routines
+;;;
+;;;
+;;; UTILITY ROUTINES
+;;;
+;;;
+
 puta
 .(
   pha

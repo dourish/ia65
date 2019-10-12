@@ -1,6 +1,29 @@
 
+;;; IA65 -- Interactive Assembler for the 6502
+;;; Assembly tables
+;;;
+;;; Paul Dourish, October 2019
+
+;;; Indices into the opcode table for each addressing mode
+;;;
+I_IMM=3
+I_ZP=4
+I_ZPX=5
+I_ZPY=6
+I_ABS=7
+I_ABSX=8
+I_ABSY=9
+I_INDX=10
+I_INDY=11
+I_ACC=12
+I_IMP=13
+I_REL=14
+
+;;; Opcode table. 15 bytes per instruction, which comprise three
+;;; bytes of the opcode itself and then 12 bytes for the instructions
+;;; for each addressing mode, or $FF when there is none.
+;;;
 opcodes
-; each record is 15 bytes long.
 ;     OPC    IMM  ZP   ZPX  ZPY, ABS  ABSX ABSY INDX INDY ACC  IMP  REL  
 .byte "LDA", $a9, $a5, $b5, $ff, $ad, $bd, $b9, $a1, $44, $ff, $ff, $ff
 .byte "LDX", $a2, $a6, $ff, $b6, $ae, $ff, $be, $ff, $ff, $ff, $ff, $ff
