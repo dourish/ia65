@@ -16,5 +16,6 @@ MKROM=mkrom
 
 
 
-ia65.x65: ia65.a65 tables.a65
+ia65.x65: ia65.a65 tables.a65 utils.a65
+
 
