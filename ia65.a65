@@ -20,6 +20,7 @@ SCRATCH    = $0010  ; through to $001F
 PRINTVEC   = $0042  ; and $0043. for printing routine.
 INPUT      = $0200  ; block out this page for monitor command input
 AMODE      = $02FF
+LINELEN    = $002E
 
   * = $0300
 
@@ -37,6 +38,10 @@ init_acia
   sta PRINTVEC+1
   jsr printvecstr
 
+
+  ;; main loop -- read a line of text and interpret it as
+  ;; an instruction of assembly language.
+  ;;
 crnextline
   jsr crlf
 
@@ -44,11 +49,12 @@ nextline
   jsr readline      ; read a line to INPUT
   lda #0            ; terminate with a NUL
   sta INPUT,y
+  sty LINELEN       ; cache line length
 
-  lda INPUT
+  lda INPUT         ; instructions?
   cmp #"X
   bne processline
-  jsr crlf
+  jsr crlf          ; exit...
   jmp end
 
 processline
@@ -69,13 +75,16 @@ space
 nonspace
 .)
 
-  ;; found non-space character
+  ;; found non-space character. start to decode. possibilities
+  ;; are a comment, a directive, a label, or an instruction.
+  ;;
   cmp #';
   beq crnextline    ; skip comments to end of line
 
-  ;; find opcode
+  ;; for the moment, presume it's an opcode. search the opcode
+  ;; table
   lda #<opcodes
-  sta SCRATCH
+  sta SCRATCH       ; pointer into the table
   lda #>opcodes
   sta SCRATCH+1
   clc
@@ -87,11 +96,11 @@ nonspace
   sta SCRATCH+3 
 
 testentry
-  lda (SCRATCH)
+  lda (SCRATCH)     ; zero indicates end-of-table
   beq endoftable
 
-  ;; opcodes are only three characters long, so we unroll this
-  ;; rather than implement it as a loop.
+  ;; compare opcode strings. opcodes are only three characters
+  ;; long, so we unroll this rather than implement it as a loop.
   ldy #0
   lda (SCRATCH),y   ; first character
   cmp (SCRATCH+2),y
@@ -120,23 +129,28 @@ skip
 
 endoftable
 ;; not an opcode, so perhaps a label?
-  lda #"N
+  lda #$20
+  jsr puta
+  lda #"X
+  jsr puta
+  jsr puta
   jsr puta
   jsr crlf
   jmp nextline
 
+;; overflow error
+overflow
 ;; error if not found
 error
   jmp end
 
 
+;; we have found a match in the opcode table. now we need to
+;; decode the operand text, which will also give us the addressing
+;; mode.
+;;
 foundmatch
-;  lda #"Y
-;  jsr puta
-;  jsr crlf
-;  jmp nextline
-
-
+  ;; skip over opcode text
   clc
   lda SCRATCH+2
   adc #3
@@ -170,16 +184,13 @@ nonspace
   adc #0
   sta SCRATCH+3
 
-;; decode the parameter. we should end up with two things -- an 8- or
-;; 16-bit value, and an indication of the addressing mode.
-
-;; if we got nothing, it's implied or accumulator, depending on
-;; the instruction.
+  ;; if we found nothing, it's implied or accumulator mode,
+  ;; depending on the instruction.
 .(
   lda (SCRATCH+2)
   bne next
 
-  ldy #I_IMP        ; try implied mode
+  ldy #I_IMP        ; does implied mode work?
   lda (SCRATCH),y
   cmp #$ff
   bne done
@@ -192,39 +203,25 @@ nonspace
   jmp error
 
 done
+  jsr padto25
+
   sty AMODE
-  jmp gotmode
+  jsr padto25
+  lda (SCRATCH),y
+  jsr putax
+  jmp crnextline
 
 next
 .)
 
-;; instructions that have a relative addressing mode have ONLY that
-;; mode
+  ;; now test for relative addressing mode. instructions that take
+  ;; relative addresses take ONLY relative addresses, so we do
+  ;; this based on the instruction alone.
 .(
   ldy #I_REL
   lda (SCRATCH),y
   cmp #$ff
   beq next
-
-  sty AMODE
-  jmp gotmode
-next
-.)
-
-.(
-  lda (SCRATCH+2)
-  cmp #"#
-  bne next
-
-  ldy #I_IMM
-  sty AMODE
-  jmp gotmode
-next
-.)
-
-  lda (SCRATCH+2),y
-  cmp #"(
-  beq parenmodes
 
   lda SCRATCH+2
   sta SCRATCH+14
@@ -232,7 +229,84 @@ next
   sta SCRATCH+15
   jsr read16hex
 
-  ;; test read routines
+  lda SCRATCH+13    ; there should be only an 8-bit value for
+  beq continue      ; a relative address. check for overflow.
+  jmp overflow
+  
+continue
+  jsr padto25
+
+  sty AMODE
+  lda (SCRATCH),y
+  jsr putax
+  lda #$20
+  jsr puta
+  lda SCRATCH+12
+  jsr putax
+  jmp crnextline
+
+next
+.)
+
+  ;; test for immediate mode by looking for the # symbol
+.(
+  lda (SCRATCH+2)
+  cmp #"#
+  bne next
+
+  clc
+  lda SCRATCH+2
+  adc #1
+  sta SCRATCH+14
+  lda SCRATCH+3
+  adc #0
+  sta SCRATCH+15
+  jsr read16hex
+
+  lda SCRATCH+13    ; any data in the top byte implies an overflow
+  beq continue
+  jmp overflow
+
+continue
+  ldy #I_IMM
+  sty AMODE
+  lda (SCRATCH),y
+
+  jsr padto25
+  jsr putax
+  lda #$20
+  jsr puta
+  lda SCRATCH+12
+  jsr putax
+  jmp crnextline
+
+next
+.)
+
+  lda (SCRATCH+2),y ; check for a parenthesis for all indirect modes
+  cmp #"(
+  beq parenmodes
+
+  ;; we have now eliminated immediate, accumulator, implied, relative,
+  ;; and indirect modes. so we are left with absolute and zero page,
+  ;; including indexed.
+
+  ;; read the numeric value of the operand. input to the read
+  ;; routine is in SCRATCH+14/15, output in SCRATCH+12/13
+  lda SCRATCH+2
+  sta SCRATCH+14
+  lda SCRATCH+3
+  sta SCRATCH+15
+  jsr read16hex
+
+  ;; is there a trailing comma? BUG BUG this is crap
+  ldy #4
+  cmp #$2c
+  bne abszp
+
+  ;; it's an indexed mode...
+  ;; BUG NOT DONE YET
+
   lda #$20
   jsr puta
   lda SCRATCH+13
@@ -241,6 +315,42 @@ next
   jsr putax
   jsr crlf
   jmp nextline
+
+abszp
+  ;; it's either absolute or zero page depending on upper byte
+  ;; and on whether the instruction has a zero page opcode
+
+  lda SCRATCH+13
+  bne absolute
+
+  ;; does the instruction have a ZP opcode?
+  ldy #I_ZP
+  cmp #$ff
+  beq absolute
+
+  jsr padto25
+  lda (SCRATCH),y
+  jsr putax         ; print opcode
+  lda #$20
+  jsr puta
+  lda SCRATCH+12    ; print lower byte
+  jsr putax
+  jmp crnextline  
+
+absolute
+  jsr padto25
+  ldy #I_ABS
+  lda (SCRATCH),y
+  jsr putax         ; print opcode
+  lda #$20
+  jsr puta
+  lda SCRATCH+12    ; print lower byte
+  jsr putax
+  lda #$20
+  jsr puta
+  lda SCRATCH+13    ; print upper byte
+  jsr putax
+  jmp crnextline
 
 parenmodes
   lda #$28
@@ -266,40 +376,29 @@ gotmode
 end
   rts
 
-;; decode addressing mode
-;; is there nothing? -> IMP
-;; is there #? -> IMM
-;; is there A? -> ACC
-;; is there (? -> parencode
-;; single byte? -> single
-;; is there ,X? -> ABSX
-;; is there ,Y? -> ABSY
-
-single
-;; does this instruction take a REL? -> REL
-;; is there ,X? -> ZPX
-;; is there ,Y? -> ZPY
-;; does this instruction take ZP? -> ZP
-;; ERROR
-
-parencode
-;; is there ,Y? -> INDY
-;; is there ,X)? -> INDX
-;; ERROR
-
-
-;; identify IMP
-;; identify IMM ("#")
-;; identify ZP
-;; identify ZPX
-;; identify ZPY
-;; identify ABSX (no paren, commaX)
-;; identify ABSY (no paren, commaY)
-;; identify INDX (paren,X)
-;; identity INDY (paren),Y
-;; identify ACC
-;; identify REL
-
+padto25
+.(
+  pha
+  lda LINELEN
+  cmp #25
+  bpl contine
+  jsr crlf
+  ldy #25
+  bra spaces
+contine
+  lda #25
+  sec
+  sbc LINELEN
+  tay
+spaces
+  lda #$20
+space
+  jsr puta
+  dey
+  bne space
+  pla
+.)
+  rts
 
 
 

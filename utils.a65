@@ -142,16 +142,28 @@ endstr
 ;;; string is passed in SCRATCH+14, result passed back in SCRATCH+12
 ;;;
 read16hex
+  stz SCRATCH+12    ; zero out intermediate result
+  stz SCRATCH+13
+
+  ;; if the first character is a $, ignore it
+  lda (SCRATCH+14)
+  cmp #$24
+  bne begin
+
+  clc
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+  bcc begin
+  inc SCRATCH+15
+  
   ;;
   ;; here's the logic:
   ;; if char code < 0x40 then subtractand is 0x30
   ;; else if char code < 0x60 then subtractand is 0x37
   ;; else subtractand is 0x57
   ;;
-
-  stz SCRATCH+12
-  stz SCRATCH+13
-
+begin
   lda (SCRATCH+14)        ; first nybble
 .(
   cmp #$60
