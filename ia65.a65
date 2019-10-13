@@ -21,6 +21,7 @@ PRINTVEC   = $0042  ; and $0043. for printing routine.
 INPUT      = $0200  ; block out this page for monitor command input
 AMODE      = $02FF
 LINELEN    = $002E
+LINENO     = $002C  ; and 002D
 
   * = $0300
 
@@ -37,6 +38,8 @@ init_acia
   lda #>greeting
   sta PRINTVEC+1
   jsr printvecstr
+  stz LINENO
+  stz LINENO+1
 
 
   ;; main loop -- read a line of text and interpret it as
@@ -50,6 +53,16 @@ nextline
   lda #0            ; terminate with a NUL
   sta INPUT,y
   sty LINELEN       ; cache line length
+
+  clc               ; increment line number by 1
+  lda LINENO
+  adc #1
+  sta LINENO
+.(
+  bcc skip
+  inc LINENO+1
+skip
+.)
 
   lda INPUT         ; instructions?
   cmp #"X
@@ -65,9 +78,9 @@ processline
 nextchar
   lda INPUT,y
   beq nextline
-  cmp #$20
+  cmp #$20          ; skip spaces
   beq space
-  cmp #$09          ; tab
+  cmp #$09          ; skip tabs
   bne nonspace
 space
   iny
@@ -81,13 +94,18 @@ nonspace
   cmp #';
   beq crnextline    ; skip comments to end of line
 
-  ;; for the moment, presume it's an opcode. search the opcode
-  ;; table
+  cmp #'.
+  beq directive
+
+  ;; attempt to interpret it as an opcode first. look it up
+  ;; in the table. uses SCRATCH as pointer into the table,
+  ;; which will also be result if successful.
   lda #<opcodes
-  sta SCRATCH       ; pointer into the table
+  sta SCRATCH
   lda #>opcodes
   sta SCRATCH+1
-  clc
+
+  clc               ; set up SCRATCH+2 as text pointer
   tya
   adc #<INPUT
   sta SCRATCH+2
@@ -138,6 +156,12 @@ endoftable
   jsr crlf
   jmp nextline
 
+
+directive
+  ;; nothing here yet
+
+;; syntax error
+syntaxerror
 ;; overflow error
 overflow
 ;; error if not found
@@ -200,16 +224,11 @@ nonspace
   cmp #$ff
   beq done
 
-  jmp error
+  jmp syntaxerror   ; neither matches, so error
 
 done
-  jsr padto25
-
   sty AMODE
-  jsr padto25
-  lda (SCRATCH),y
-  jsr putax
-  jmp crnextline
+  jmp output1       ; output a single byte instruction
 
 next
 .)
@@ -227,6 +246,11 @@ next
   sta SCRATCH+14
   lda SCRATCH+3
   sta SCRATCH+15
+
+  lda (SCRATCH+2)
+  bne proceed
+  jmp syntaxerror
+proceed
   jsr read16hex
 
   lda SCRATCH+13    ; there should be only an 8-bit value for
@@ -234,16 +258,8 @@ next
   jmp overflow
   
 continue
-  jsr padto25
-
   sty AMODE
-  lda (SCRATCH),y
-  jsr putax
-  lda #$20
-  jsr puta
-  lda SCRATCH+12
-  jsr putax
-  jmp crnextline
+  jmp output2       ; output two-byte instruction
 
 next
 .)
@@ -256,13 +272,13 @@ next
 
 immediate
   clc
-  lda SCRATCH+2
+  lda SCRATCH+2     ; skip past the hash symbol
   adc #1
   sta SCRATCH+14
   lda SCRATCH+3
   adc #0
   sta SCRATCH+15
-  jsr read16hex
+  jsr read16hex     ; and read the value
 
   lda SCRATCH+13    ; any data in the top byte implies an overflow
   beq continue
@@ -271,23 +287,18 @@ immediate
 continue
   ldy #I_IMM
   sty AMODE
-  lda (SCRATCH),y
-
-  jsr padto25
-  jsr putax
-  lda #$20
-  jsr puta
-  lda SCRATCH+12
-  jsr putax
-  jmp crnextline
+  jmp output2
 
 next2
 .)
 
-  lda (SCRATCH+2),y ; check for a parenthesis for all indirect modes
+  ;; check for parenthesis for all the indirect modes
+  lda (SCRATCH+2),y
   cmp #"(
-  beq parenmodes
+  bne nonparen
+  jmp parenmodes
 
+nonparen
   ;; we have now eliminated immediate, accumulator, implied, relative,
   ;; and indirect modes. so we are left with absolute and zero page,
   ;; including indexed.
@@ -300,27 +311,55 @@ next2
   sta SCRATCH+15
   jsr read16hex
 
-  ;; is there a trailing comma? BUG BUG this is crap
+  ;; is there a trailing comma after the operand?
   lda (SCRATCH+14)
   cmp #$2c
   bne abszp
 
-  ;; it's an indexed mode...
-  ;; BUG NOT DONE YET
+  ;; found a comma, so it's an indexed mode... which index register?
+  ldy #1
+  lda (SCRATCH+14),y
+  cmp #"Y
+  beq indexy        ; for Y index
 
-  lda #$20
-  jsr puta
-  lda #"(
-  jsr puta
-  lda SCRATCH+13
-  jsr putax
-  lda SCRATCH+12
-  jsr putax
-  jsr crlf
-  jmp nextline
+  ;; indexed by X. determine ABSX or ZPX
+  lda SCRATCH+13    ; check if MSB is zero
+  bne absx          ; no, so definitely ABSX
+  ldy #I_ZPX        ; yes, so try ZPX
+  sty AMODE
+
+  ;; check that instruction exists
+  lda (SCRATCH),y
+  cmp #$ff
+  beq absx          ; default to absx if there is no zpx opcode
+
+  jmp output2
+absx
+  ldy #I_ABSX
+  sty AMODE
+  jmp output3
+
+indexy
+  ;; indexed by Y. determine ABSY or ZPY
+  lda SCRATCH+13    ; check if MSB is zero
+  bne absy          ; no, so definitely ABSY
+  ldy #I_ZPY        ; yes, so try ZPY
+  sty AMODE
+
+  ;; check that instruction exists
+  lda (SCRATCH),y
+  cmp #$ff
+  beq absy          ; default to absy if there is no zpy opcode
+  jmp output2
+
+absy
+  ldy #I_ABSY
+  sty AMODE
+  jmp output3
 
 abszp
-  ;; it's either absolute or zero page depending on upper byte
+  ;; having eliminated other possibilities, the addressing mode
+  ;; is either absolute or zero page depending on upper byte
   ;; and on whether the instruction has a zero page opcode
 
   lda SCRATCH+13
@@ -328,53 +367,100 @@ abszp
 
   ;; does the instruction have a ZP opcode?
   ldy #I_ZP
+  lda (SCRATCH),y
   cmp #$ff
   beq absolute
 
-  jsr padto25
-  lda (SCRATCH),y
-  jsr putax         ; print opcode
-  lda #$20
-  jsr puta
-  lda SCRATCH+12    ; print lower byte
-  jsr putax
-  jmp crnextline  
+  sty AMODE
+  jmp output2
 
 absolute
-  jsr padto25
   ldy #I_ABS
-  lda (SCRATCH),y
+  sty AMODE
+  jmp output3
+
+parenmodes
+  ;; (zp),y
+  ;; (zp)
+  ;; (zp,x)
+
+  clc               ; move text pointer past parenthesis
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+.(
+  bcc skip
+  inc SCRATCH+15
+skip
+.)
+
+  jsr read16hex     ; read the address
+
+  ;; is the next character a comma?
+  lda (SCRATCH+14)
+  cmp #$2c
+  beq inxind
+
+  ;; BUG BUG BUG THIS IS NOT FINISHED!
+  lda #'X
+  jsr puta
+  jsr puta
+  jsr puta
+
+  jmp crnextline
+
+  ;; is the next character a close paren?
+
+inxind
+  ;; index indirect (ie (foo,x))
+  ;; test to be sure
+  ldy #1
+  lda (SCRATCH+14),y
+  cmp #'x
+  beq okay
+  cmp #'X
+  beq okay
+  lda SCRATCH+13
+  beq okay
+  jmp syntaxerror
+okay
+  ldy #I_INDX
+  sty AMODE
+  jmp output2
+
+
+output3
+  jsr padto25
+  ldy AMODE         ; load addressing mode into Y
+  lda (SCRATCH),y   ; load opcode from table
   jsr putax         ; print opcode
   lda #$20
-  jsr puta
+  jsr puta          ; print a space
   lda SCRATCH+12    ; print lower byte
   jsr putax
   lda #$20
-  jsr puta
+  jsr puta          ; print a space
   lda SCRATCH+13    ; print upper byte
   jsr putax
   jmp crnextline
 
-parenmodes
-  lda #$28
-  jsr puta
-
-;; error
-  lda #$FF
-  sta AMODE
-
-
-gotmode
+output2
+  jsr padto25
   ldy AMODE
-  lda #32
-  jsr puta
   lda (SCRATCH),y
-  jsr putax
-  lda #32
+  jsr putax         ; print opcode
+  lda #$20
   jsr puta
+  lda SCRATCH+12    ; print lower byte
+  jsr putax
+  jmp crnextline
 
-  jsr crlf
-  jmp nextline
+output1
+  jsr padto25
+  ldy AMODE
+  lda (SCRATCH),y
+  jsr putax         ; print opcode
+  jmp crnextline
 
 end
   rts
