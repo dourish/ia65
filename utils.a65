@@ -139,7 +139,8 @@ endstr
 
 
 ;;; read an 8- or 16-bit number in hexadecimal. base address for the
-;;; string is passed in SCRATCH+14, result passed back in SCRATCH+12
+;;; string is passed in SCRATCH+14, result passed back in SCRATCH+12.
+;;; on exit, SCRATCH+14 is updated to next character to process.
 ;;;
 read16hex
   stz SCRATCH+12    ; zero out intermediate result
@@ -250,13 +251,18 @@ next
 skip
 .)
 
+.(
   lda (SCRATCH+14)      ; third nybble
-  beq endafter2
+  beq endread
   cmp #$2c              ; comma. specifically for the assembler
-  beq endafter2
+  beq endread
   cmp #$29              ; close paren. specifically for the assembler
-  beq endafter2
+  bne continue
+endread
+  jmp endafter2
 
+continue
+.)
   ;; we're moving on to second nybble, so move the accumulated
   ;; data up to the high byte
   pha
@@ -331,7 +337,15 @@ next
   adc SCRATCH+12
   sta SCRATCH+12
 .)
+
+  clc
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+  bcc finishread
+  inc SCRATCH+15
   bra finishread
+
 endafter3
   ;; if we end after reading three nybbles, we need reconfigure
   ;; the bits a little. there are four bits in the top byte that

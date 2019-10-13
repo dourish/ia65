@@ -252,8 +252,9 @@ next
 .(
   lda (SCRATCH+2)
   cmp #"#
-  bne next
+  bne next2
 
+immediate
   clc
   lda SCRATCH+2
   adc #1
@@ -280,7 +281,7 @@ continue
   jsr putax
   jmp crnextline
 
-next
+next2
 .)
 
   lda (SCRATCH+2),y ; check for a parenthesis for all indirect modes
@@ -300,7 +301,7 @@ next
   jsr read16hex
 
   ;; is there a trailing comma? BUG BUG this is crap
-  ldy #4
+  lda (SCRATCH+14)
   cmp #$2c
   bne abszp
 
@@ -308,6 +309,8 @@ next
   ;; BUG NOT DONE YET
 
   lda #$20
+  jsr puta
+  lda #"(
   jsr puta
   lda SCRATCH+13
   jsr putax
@@ -381,11 +384,11 @@ padto25
   pha
   lda LINELEN
   cmp #25
-  bpl contine
+  bmi continue
   jsr crlf
   ldy #25
   bra spaces
-contine
+continue
   lda #25
   sec
   sbc LINELEN
