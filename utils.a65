@@ -1,10 +1,13 @@
 
 ;;;
 ;;;
-;;; UTILITY ROUTINES
+;;; UTILITY ROUTINES -- mainly reading and printing
 ;;;
 ;;;
 
+
+;;; Print the ASCII value stored in the accumulator
+;;;
 puta
 .(
   pha
@@ -18,6 +21,8 @@ wait_txd_empty
   rts
 
 
+;;; Print the value stored in the accumulator in hexadecimal
+;;;
 putax
 .(
   phy
@@ -51,6 +56,7 @@ wait_txd_empty2
 .)
   ply
   rts
+
 
 ;;; read a line of input from the serial interface
 ;;; leaves data in the buffer at INPUT
@@ -88,6 +94,8 @@ backspace
 done
   rts
 
+;;; print carriage return and line feed
+;;;
 crlf
   pha
 .(
@@ -109,6 +117,9 @@ wait_txd_empty
   pla
   rts
 
+
+;;; print a string whose address is in PRINTVEC
+;;;
 printvecstr
   ldy #0
 .(
@@ -125,6 +136,282 @@ wait_txd_empty
 endstr
 .)
   rts
+
+
+;;; read an 8- or 16-bit number in hexadecimal. base address for the
+;;; string is passed in SCRATCH+14, result passed back in SCRATCH+12
+;;;
+read16hex
+  ;;
+  ;; here's the logic:
+  ;; if char code < 0x40 then subtractand is 0x30
+  ;; else if char code < 0x60 then subtractand is 0x37
+  ;; else subtractand is 0x57
+  ;;
+
+  stz SCRATCH+12
+  stz SCRATCH+13
+
+  lda (SCRATCH+14)        ; first nybble
+.(
+  cmp #$60
+  bcc upper
+  ;; lower case character, so substract $57
+  sec
+  sbc #$57
+  bra next
+upper
+  cmp #$40
+  bcc number
+  ;; upper case character, so substract $37
+  sec
+  sbc #$037
+  bra next
+number
+  ;; numeric character, so subtract $30
+  sec
+  sbc #$30
+next
+  sta SCRATCH+12          ; assembling result here
+.)
+
+  ;; move on to next character
+  clc
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+.(
+  bcc skip
+  inc SCRATCH+15
+skip
+.)
+
+.(
+  lda (SCRATCH+14)      ; second nybble
+  beq endread
+  cmp #$2c              ; comma. specifically for the assembler
+  beq endread
+  cmp #$29              ; close paren. specifically for the assembler
+  beq endread
+  bra continue
+endread
+  jmp endafter1
+continue
+.)
+
+.(
+  cmp #$60
+  bcc upper
+  ;; lower case character, so substract $57
+  sec
+  sbc #$57
+  bra next
+upper
+  cmp #$40
+  bcc number
+  ;; upper case character, so substract $37
+  sec
+  sbc #$037
+  bra next
+number
+  ;; numeric character, so subtract $30
+  sec
+  sbc #$30
+next
+  asl SCRATCH+12    ; shift temp value up by four bits
+  asl SCRATCH+12
+  asl SCRATCH+12
+  asl SCRATCH+12
+  clc
+  adc SCRATCH+12    ; add new nybble
+  sta SCRATCH+12
+.)
+
+  ;; move on to next character
+  clc
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+.(
+  bcc skip
+  inc SCRATCH+15
+skip
+.)
+
+  lda (SCRATCH+14)      ; third nybble
+  beq endafter2
+  cmp #$2c              ; comma. specifically for the assembler
+  beq endafter2
+  cmp #$29              ; close paren. specifically for the assembler
+  beq endafter2
+
+  ;; we're moving on to second nybble, so move the accumulated
+  ;; data up to the high byte
+  pha
+  lda SCRATCH+12
+  sta SCRATCH+13
+  pla
+
+.(
+  cmp #$60
+  bcc upper
+  ;; lower case character, so substract $57
+  sec
+  sbc #$57
+  bra next
+upper
+  cmp #$40
+  bcc number
+  ;; upper case character, so substract $37
+  sec
+  sbc #$037
+  bra next
+number
+  ;; numeric character, so subtract $30
+  sec
+  sbc #$30
+next
+  sta SCRATCH+12
+.)
+
+  ;; move on to next character
+  clc
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+.(
+  bcc skip
+  inc SCRATCH+15
+skip
+.)
+
+  lda (SCRATCH+14)      ; fourth nybble
+  beq endafter3
+  cmp #$2c              ; comma. specifically for the assembler
+  beq endafter3
+  cmp #$29              ; close paren. specifically for the assembler
+  beq endafter3
+
+.(
+  cmp #$60
+  bcc upper
+  ;; lower case character, so substract $57
+  sec
+  sbc #$57
+  bra next
+upper
+  cmp #$40
+  bcc number
+  ;; upper case character, so substract $37
+  sec
+  sbc #$037
+  bra next
+number
+  ;; numeric character, so subtract $30
+  sec
+  sbc #$30
+next
+  asl SCRATCH+12
+  asl SCRATCH+12
+  asl SCRATCH+12
+  asl SCRATCH+12
+  clc
+  adc SCRATCH+12
+  sta SCRATCH+12
+.)
+  bra finishread
+endafter3
+  ;; if we end after reading three nybbles, we need reconfigure
+  ;; the bits a little. there are four bits in the top byte that
+  ;; should be in the bottom
+  lda SCRATCH+12
+  and #$0f          ; this shouldn't make a difference
+  lsr SCRATCH+13
+  ror SCRATCH+12
+  lsr SCRATCH+13
+  ror SCRATCH+12
+  lsr SCRATCH+13
+  ror SCRATCH+12
+  lsr SCRATCH+13
+  ror SCRATCH+12
+  ora SCRATCH+12    ; restore bottom four bits
+  sta SCRATCH+12
+  
+endafter2
+  ;; nothing to do here
+endafter1
+  ;; nothing to do here
+finishread
+  rts
+
+
+#if 0
+;; read a 16-bit number in decimal. need to allow for the fact that
+;; there may be a variable number of digits (but presume that
+;; there is always one).
+;; NOTE changed the label because it was calling the wrong place!
+readdec16
+.(
+  jsr pop16         ; move the string address into stackaccess
+
+  dex               ; make some workspace on the stack. need two 16-byte
+  dex               ; words, one of which will eventually be our result
+  dex               ; so, workspace space is stackbase+1,x to stackbase+4,x
+  dex
+  stz stackbase+1,x ; zero out both 16-bit values
+  stz stackbase+2,x
+  stz stackbase+3,x
+  stz stackbase+4,x
+
+  phy               ; preserve y
+  ldy #0            ; y indexes digits of the input string
+nextdigit
+  lda (stackaccess),y
+
+  sec
+  sbc #$30          ; turn from ascii digit into a number
+  clc               ; add it to our partial result
+  adc stackbase+3,x
+  sta stackbase+3,x
+  lda stackbase+4,x
+  adc #0
+  sta stackbase+4,x
+  iny               ; bump the character count
+  cpy #5            ; was that the last digit to be read? (max 5)
+  beq donelastdigit  
+  lda (stackaccess),y
+  beq donelastdigit ; stop stop if we hit null-terminator
+
+mult10              ; more digits, so multiply by ten and go around
+  asl stackbase+3,x ; shift left to multiply by two
+  rol stackbase+4,x
+
+  lda stackbase+3,x ; make a copy in the other temporary slot
+  sta stackbase+1,x
+  lda stackbase+4,x
+  sta stackbase+2,x
+  asl stackbase+1,x ; shift the copy left twice more, so x8 in total
+  rol stackbase+2,x
+  asl stackbase+1,x
+  rol stackbase+2,x
+
+  clc               ; add them (8x + 2x = 10x)
+  lda stackbase+1,x
+  adc stackbase+3,x
+  sta stackbase+3,x
+  lda stackbase+2,x
+  adc stackbase+4,x
+  sta stackbase+4,x
+
+  bra nextdigit
+
+donelastdigit
+  inx               ; drop one of the temporary variables
+  inx               ; but leave the other, which is our result
+  ply               ; restore y
+.)
+  rts
+#endif
 
 hextable:        .byte "0123456789ABCDEF"
 

@@ -222,12 +222,29 @@ next
 next
 .)
 
-  lda (SCRATCH)
+  lda (SCRATCH+2),y
   cmp #"(
   beq parenmodes
 
+  lda SCRATCH+2
+  sta SCRATCH+14
+  lda SCRATCH+3
+  sta SCRATCH+15
+  jsr read16hex
+
+  ;; test read routines
+  lda #$20
+  jsr puta
+  lda SCRATCH+13
+  jsr putax
+  lda SCRATCH+12
+  jsr putax
+  jsr crlf
+  jmp nextline
 
 parenmodes
+  lda #$28
+  jsr puta
 
 ;; error
   lda #$FF
