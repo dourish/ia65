@@ -141,7 +141,8 @@ testopcode
   iny
   lda (SCRATCH),y   ; third character
   cmp (SCRATCH+2),y
-  beq foundmatch
+  bne nextentry
+  jmp foundmatch
 
   ;; no entry found, so move on to the next table entry
 nextentry
@@ -189,7 +190,7 @@ directive
 .(
 testdir
   lda (SCRATCH)
-  bne enddirtable
+  beq enddirtable
   tay
 
 nextchar
@@ -198,7 +199,58 @@ nextchar
   bne nextdir
   dey
   bne nextchar
+
   ;; successful match
+  ;; set up text pointer for read16hex, skipping space
+
+  clc
+  lda (SCRATCH)     ; load the count for the matching directive
+  inc               ; add one to allow for the leading period
+  adc SCRATCH+2     ; add to the text pointer
+  sta SCRATCH+14    ; deposit where read16hex will look
+  lda SCRATCH+3
+  adc #0
+  sta SCRATCH+15
+
+.(
+  ldy #0
+skipspace
+  lda (SCRATCH+14),y
+  beq nonspace      ; terminate at end-of-line
+  cmp #$20          ; skip spaces
+  beq space
+  cmp #$09          ; skip tabs
+  bne nonspace
+space
+  iny
+  bra skipspace
+nonspace
+  clc
+  tya
+  adc SCRATCH+14
+  sta SCRATCH+14
+  bcc skip
+  inc SCRATCH+15
+skip
+.)
+  clc               ; set SCRATCH to the jump address
+  lda (SCRATCH)     ; which is COUNT+1 bytes past the start
+  inc
+  adc SCRATCH
+  sta SCRATCH
+.(
+  bcc skip
+  inc SCRATCH+1
+skip
+.)
+  ldy #1            ; grab address, pointed to by SCRATCH
+  lda (SCRATCH)     ; and store it in SCRATCH again
+  pha               ; cache LSB
+  lda (SCRATCH),y   ; fetch MSB
+  sta SCRATCH+1     ; store MSB
+  pla               ; retrieve LSB
+  sta SCRATCH       ; store LSB
+  jmp (SCRATCH)     ; jump to that address
 
 nextdir
   clc
@@ -219,8 +271,6 @@ enddirtable
 
 orgdir
   ;; set code address to value specified
-  ;; first, skip space
-  ;; BUG BUG DO THIS
 
   ;; read the address
   jsr read16hex
@@ -374,7 +424,7 @@ next2
 .)
 
   ;; check for parenthesis for all the indirect modes
-  lda (SCRATCH+2),y
+  lda (SCRATCH+2)
   cmp #"(
   bne nonparen
   jmp parenmodes
@@ -465,32 +515,42 @@ parenmodes
   ;; (zp)
   ;; (zp,x)
 
-  clc               ; move text pointer past parenthesis
-  lda SCRATCH+14
+  clc               ; move text pointer past opening parenthesis
+  lda SCRATCH+2
   adc #1
   sta SCRATCH+14
-.(
-  bcc skip
-  inc SCRATCH+15
-skip
-.)
+  lda SCRATCH+3
+  adc #0
+  sta SCRATCH+15
 
   jsr read16hex     ; read the address
 
   ;; is the next character a comma?
   lda (SCRATCH+14)
   cmp #$2c
-  beq inxind
-
-  ;; BUG BUG BUG THIS IS NOT FINISHED!
-  lda #'X
-  jsr puta
-  jsr puta
-  jsr puta
-
-  jmp crnextline
+  beq inxind        ; if so, it's indexed indirect
 
   ;; is the next character a close paren?
+  cmp #$29
+  beq zpzpy
+  jmp syntaxerror
+
+zpzpy
+  ;; this is either (zp) or (zp),y
+  ldy #1
+  lda (SCRATCH+14),y
+  cmp #$2c           ; comma?
+  beq indy
+
+  ;; this is where (ZP) support should go but I don't
+  ;; have it yet BUG BUG BUG
+  jmp syntaxerror
+
+indy
+  ldy #I_INDY
+  sty AMODE
+  jmp output2
+
 
 inxind
   ;; index indirect (ie (foo,x))
