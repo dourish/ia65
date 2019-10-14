@@ -48,11 +48,11 @@ opcodes
 .byte "CMP", $c9, $c5, $d5, $ff, $cd, $dd, $d9, $c1, $d1, $ff, $ff, $ff
 .byte "CPX", $e0, $e4, $ff, $ff, $ec, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 .byte "CPY", $c0, $c4, $ff, $ff, $cc, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-.byte "DEC", $ff, $c6, $d6, $ff, $ce, $de, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "DEC", $ff, $c6, $d6, $ff, $ce, $de, $ff, $ff, $ff, $ff, $3a, $ff
 .byte "DEX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ca, $ff
 .byte "DEY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $88, $ff
 .byte "EOR", $49, $45, $55, $ff, $4d, $5d, $59, $41, $51, $ff, $ff, $ff
-.byte "INC", $ff, $e6, $f6, $ff, $ee, $fe, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "INC", $ff, $e6, $f6, $ff, $ee, $fe, $ff, $ff, $ff, $ff, $1a, $ff
 .byte "INX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $e8, $ff
 .byte "INY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $c8, $ff
 .byte "JMP", $ff, $ff, $ff, $ff, $4c, $ff, $ff, $6c, $ff, $ff, $ff, $ff

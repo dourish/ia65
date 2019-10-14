@@ -1,3 +1,25 @@
 ia65 is an interactive assembler for the Mite 6502 project. I've been
 doing my assembly work via a cross-assembler but now I want a self-
 hosted assembler to run on the Mite board itself.
+
+Current state:
+
+  * all NMOS 6502 opcodes supported
+  * .ORG, .EQU, .BYTE, .WORD directives supported
+  * labels up to 14 characters (but no forward references)
+  * all numbers in hexadecimal
+
+
+So this should work, for example:
+
+  PRCH .EQU $CD04
+
+  ;; Execute a basic loop
+  INIT
+    LDA #30
+    LDY #10
+  LOOP
+    JSR PRCH       ; print character
+    INC            ; ok, that's a 65C02 opcode!
+    DEY
+    BNE LOOP
