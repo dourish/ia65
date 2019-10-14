@@ -88,6 +88,15 @@ opcodes
 .byte $00
 
 
+dirtable
+.byte 3, "ORG"
+.word orgdir
+.byte 4, "BYTE"
+.word bytedir
+.byte 4, "WORD"
+.word worddir
+.byte $00
+
 
 
 

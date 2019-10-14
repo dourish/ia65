@@ -22,6 +22,7 @@ INPUT      = $0200  ; block out this page for monitor command input
 AMODE      = $02FF
 LINELEN    = $002E
 LINENO     = $002C  ; and 002D
+ORG        = $002A  ; and 002B
 
   * = $0300
 
@@ -40,6 +41,8 @@ init_acia
   jsr printvecstr
   stz LINENO
   stz LINENO+1
+  stz ORG
+  stz ORG+1
 
 
   ;; main loop -- read a line of text and interpret it as
@@ -49,6 +52,14 @@ crnextline
   jsr crlf
 
 nextline
+  lda ORG+1
+  jsr putax
+  lda ORG
+  jsr putax
+  lda #$20
+  jsr puta
+  jsr puta
+
   jsr readline      ; read a line to INPUT
   lda #0            ; terminate with a NUL
   sta INPUT,y
@@ -113,7 +124,7 @@ nonspace
   adc #0
   sta SCRATCH+3 
 
-testentry
+testopcode
   lda (SCRATCH)     ; zero indicates end-of-table
   beq endoftable
 
@@ -143,7 +154,7 @@ nextentry
   inc SCRATCH+1
 skip
 .)
-  bra testentry
+  bra testopcode
 
 endoftable
 ;; not an opcode, so perhaps a label?
@@ -158,13 +169,83 @@ endoftable
 
 
 directive
-  ;; nothing here yet
+  ;; we detected a leading period, so determine if this is a
+  ;; assembler directive. the table dirtable contains directives
+  ;; and jump addresses for each.
+
+  lda #<dirtable    ; set up pointer to table
+  sta SCRATCH
+  lda #>dirtable
+  sta SCRATCH+1
+
+  clc               ; set up pointer to text
+  tya
+  adc #<INPUT
+  sta SCRATCH+2
+  lda #>INPUT+1
+  adc #0
+  sta SCRATCH+3
+
+.(
+testdir
+  lda (SCRATCH)
+  bne enddirtable
+  tay
+
+nextchar
+  lda (SCRATCH),y
+  cmp (SCRATCH+2),y
+  bne nextdir
+  dey
+  bne nextchar
+  ;; successful match
+
+nextdir
+  clc
+  lda (SCRATCH)
+  adc #3
+  adc SCRATCH
+  sta SCRATCH
+.(
+  bcc skip
+  inc SCRATCH+1
+skip
+.)
+  bra testdir
+.)
+
+enddirtable
+  jmp direrror
+
+orgdir
+  ;; set code address to value specified
+  ;; first, skip space
+  ;; BUG BUG DO THIS
+
+  ;; read the address
+  jsr read16hex
+
+  ;; set ORG
+  lda SCRATCH+12
+  sta ORG
+  lda SCRATCH+13
+  sta ORG+1
+  jmp crnextline
+
+bytedir
+  ;; nothing here yet (implement .BYTE)
+
+worddir
+  ;; nothing here yet (implement .WORD)
+
 
 ;; syntax error
 syntaxerror
 ;; overflow error
 overflow
 ;; error if not found
+direrror
+;; directiveerror
 error
   jmp end
 
@@ -442,6 +523,16 @@ output3
   jsr puta          ; print a space
   lda SCRATCH+13    ; print upper byte
   jsr putax
+
+.(
+  clc               ; increment code address pointer by 3
+  lda ORG
+  adc #3
+  sta ORG
+  bcc skip
+  inc ORG+1
+skip
+.)
   jmp crnextline
 
 output2
@@ -453,6 +544,16 @@ output2
   jsr puta
   lda SCRATCH+12    ; print lower byte
   jsr putax
+
+.(
+  clc               ; increment code address pointer by 2
+  lda ORG
+  adc #2
+  sta ORG
+  bcc skip
+  inc ORG+1
+skip
+.)
   jmp crnextline
 
 output1
@@ -460,6 +561,16 @@ output1
   ldy AMODE
   lda (SCRATCH),y
   jsr putax         ; print opcode
+
+.(
+  clc               ; increment code address pointer by 1
+  lda ORG
+  adc #1
+  sta ORG
+  bcc skip
+  inc ORG+1
+skip
+.)
   jmp crnextline
 
 end
