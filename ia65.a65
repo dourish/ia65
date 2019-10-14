@@ -269,9 +269,8 @@ skip
 enddirtable
   jmp direrror
 
+;;; implement .ORG, setting code address to value specified
 orgdir
-  ;; set code address to value specified
-
   ;; read the address
   jsr read16hex
 
@@ -282,12 +281,56 @@ orgdir
   sta ORG+1
   jmp crnextline
 
+;;; implement .BYTE, writing a single byte into the stream
 bytedir
-  ;; nothing here yet (implement .BYTE)
+  ;; read the address
+  jsr read16hex
+  lda SCRATCH+13
+  bne msb
+  jsr padto25
+  lda SCRATCH+12
+  jsr putax
+  clc
+  lda ORG
+  adc #1
+  sta ORG
+.(
+  bcc skip
+  inc ORG+1
+skip
+.)
+  jmp crnextline
 
+msb
+  jmp overflow
+
+
+;;; implemented .WORD, writing a two-byte word into the stream.
 worddir
+  ;; read the address
+  jsr read16hex
+  jsr padto25
+  lda SCRATCH+12
+  jsr putax
+  lda #$20
+  jsr puta
+  lda SCRATCH+13
+  jsr putax
+  clc
+  lda ORG
+  adc #2
+  sta ORG
+.(
+  bcc skip
+  inc ORG+1
+skip
+.)
+  jmp crnextline
+
   ;; nothing here yet (implement .WORD)
 
+
+;;; errors
 
 syntaxerror
   jsr crlf
