@@ -163,9 +163,10 @@ endoftable
   ;; didn't find a matching opcode, so presume that this
   ;; is a label and add it to the label table
   jsr addlabel
-checkformore
+
 .(
-  ;; is there more to process on this line?
+  ;; is there more text to process on this line? first skip
+  ;; space and then see if there is text left.
   ldy #0
 skiptext
   lda (SCRATCH+2),y
@@ -187,7 +188,7 @@ spaces
 .)
 
   ;; if we get here, there is more text to process. update
-  ;; text pointer
+  ;; text pointer.
   clc
   tya
   adc SCRATCH+2
@@ -244,15 +245,15 @@ nonspace
   adc #0
   sta SCRATCH+3
 
-  ;; if we found nothing, it's implied or accumulator mode,
-  ;; depending on the instruction.
+  ;; if we found no operand, then it's implied or accumulator mode,
+  ;; depending on the instruction. test for each.
 .(
   lda (SCRATCH+2)
   bne next
 
   ldy #I_IMP        ; does implied mode work?
   lda (SCRATCH),y
-  cmp #$ff
+  cmp #$ff          ; $ff signals no valid opcode for this mode
   bne done
 
   lda #I_ACC        ; try accumulator mode
@@ -260,9 +261,10 @@ nonspace
   cmp #$ff
   bne done
 
-  jmp syntaxerror   ; neither matches, so error
+  jmp syntaxerror   ; neither matches, so issue an error
 
 done
+  ;; on success, output the opcode
   sty AMODE
   jmp output1       ; output a single byte instruction
 
@@ -278,6 +280,7 @@ next
   cmp #$ff
   beq next
 
+  ;; set up text pointer to read the operand
   lda SCRATCH+2
   sta SCRATCH+14
   lda SCRATCH+3
@@ -285,13 +288,14 @@ next
 
   lda (SCRATCH+2)
   bne proceed
-  jmp syntaxerror
-proceed
-;;  jsr read16hex
-  jsr readvalue
+  jmp syntaxerror   ; syntax error if there is no operand provided
 
-  ;; make this into a relative value? subtract ORG from the destination
-  ;; address, and then adjust by 2 for the instruction we are assembling.
+proceed
+  jsr readvalue     ; read value (either number or a label)
+
+  ;; for relative mode, we need a relative address.
+  ;; subtract ORG from the destination address, and then
+  ;; adjust by 2 for the instruction we are assembling.
   sec
   lda SCRATCH+12
   sbc ORG
@@ -335,7 +339,6 @@ immediate
   lda SCRATCH+3
   adc #0
   sta SCRATCH+15
-;;  jsr read16hex     ; and read the value
   jsr readvalue
 
   lda SCRATCH+13    ; any data in the top byte implies an overflow
@@ -367,7 +370,6 @@ nonparen
   sta SCRATCH+14
   lda SCRATCH+3
   sta SCRATCH+15
-;;  jsr read16hex
   jsr readvalue
 
   ;; is there a trailing comma after the operand?
@@ -451,7 +453,8 @@ parenmodes
   adc #0
   sta SCRATCH+15
 
-  jsr read16hex     ; read the address
+;;  jsr read16hex     ; read the address
+  jsr readvalue
 
   ;; is the next character a comma?
   lda (SCRATCH+14)
@@ -485,8 +488,7 @@ inxind
   ;; test to be sure
   ldy #1
   lda (SCRATCH+14),y
-  cmp #'x
-  beq okay
+  and #%11011111
   cmp #'X
   beq okay
   lda SCRATCH+13
@@ -497,6 +499,10 @@ okay
   sty AMODE
   jmp output2
 
+
+;;;
+;;; output routines.
+;;;
 
 output3
   jsr padto25
@@ -565,6 +571,9 @@ end
   rts
 
 
+;;;
+;;; handle assembler directives
+;;;
 
 directive
   ;; we detected a leading period, so determine if this is a
