@@ -23,6 +23,7 @@ AMODE      = $02FF
 LINELEN    = $002E
 LINENO     = $002C  ; and 002D
 ORG        = $002A  ; and 002B
+LABELS     = $0028  ; and 0029
 
   * = $0300
 
@@ -43,7 +44,9 @@ init_acia
   stz LINENO+1
   stz ORG
   stz ORG+1
-
+  stz LABELS
+  lda #$70          ; MSB of end of the labels table
+  sta LABELS+1
 
   ;; main loop -- read a line of text and interpret it as
   ;; an instruction of assembly language.
@@ -158,13 +161,12 @@ skip
   bra testopcode
 
 endoftable
-;; not an opcode, so perhaps a label?
-  lda #$20
-  jsr puta
-  lda #"X
-  jsr puta
-  jsr puta
-  jsr puta
+  ;; didn't find a matching opcode, so presume that this
+  ;; is a label and add it to the label table
+  jsr addlabel
+
+  ;; fix this after. want to be able to continue with line
+
   jsr crlf
   jmp nextline
 
@@ -327,8 +329,77 @@ skip
 .)
   jmp crnextline
 
-  ;; nothing here yet (implement .WORD)
+;; implement .EQU, setting value of last label
+equdir
+  ;; read the address
+  jsr read16hex
 
+  ldy #14
+  lda SCRATCH+12
+  sta (LABELS),y
+  iny
+  lda SCRATCH+13
+  sta (LABELS),y
+  jsr padto25
+  lda SCRATCH+12
+  jsr putax
+  lda #$20
+  jsr puta
+  lda SCRATCH+13
+  jsr putax
+  jmp crnextline
+
+
+;;;
+;;; the labels table grows downward from $7000
+;;; all entries are 16 bytes long -- 14 padded with zeros for the
+;;; label and two for the value
+;;;
+
+addlabel
+  sec               ; set SCRATCH to be address of new
+  lda LABELS        ; entry in the labels table
+  sbc #16
+  sta SCRATCH
+  lda LABELS+1
+  sbc #0
+  sta SCRATCH+1
+
+  ldy #0
+copychar
+  lda (SCRATCH+2),y
+  beq copyspaces
+  cmp #$20
+  beq copyspaces
+  sta (SCRATCH),y
+  iny
+  cpy #14
+  bne copychar
+  lda #32
+copyspaces
+  cpy #14
+  beq endcopy
+  sta (SCRATCH),y
+  iny
+  bra copyspaces
+endcopy
+
+  ;; by default, set value to current address
+  lda ORG
+  sta (SCRATCH),y
+  iny
+  lda ORG+1
+  sta (SCRATCH),y
+
+  ;; update LABELS
+  lda SCRATCH
+  sta LABELS
+  lda SCRATCH+1
+  sta LABELS+1
+
+  rts
+
+  
 
 ;;; errors
 

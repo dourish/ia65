@@ -95,6 +95,8 @@ dirtable
 .word bytedir
 .byte 4, "WORD"
 .word worddir
+.byte 3, "EQU"
+.word equdir
 .byte $00
 
 
