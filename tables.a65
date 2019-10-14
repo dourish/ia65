@@ -55,18 +55,43 @@ opcodes
 .byte "INC", $ff, $e6, $f6, $ff, $ee, $fe, $ff, $ff, $ff, $ff, $ff, $ff
 .byte "INX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $e8, $ff
 .byte "INY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $c8, $ff
+.byte "JMP", $ff, $ff, $ff, $ff, $4c, $ff, $ff, $6c, $ff, $ff, $ff, $ff
 .byte "JSR", $ff, $ff, $ff, $ff, $20, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 .byte "LDA", $a9, $a5, $b5, $ff, $ad, $bd, $b9, $a1, $44, $ff, $ff, $ff
 .byte "LDX", $a2, $a6, $ff, $b6, $ae, $ff, $be, $ff, $ff, $ff, $ff, $ff
 .byte "LDY", $a0, $a4, $b4, $ff, $ac, $bc, $ff, $ff, $ff, $ff, $ff, $ff
 .byte "LSR", $ff, $46, $56, $ff, $4e, $5e, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "NOP", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ea, $ff
+.byte "ORA", $09, $05, $15, $ff, $0d, $1d, $19, $01, $11, $ff, $ff, $ff
 .byte "PHA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $48, $ff
+.byte "PHP", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $08, $ff
 .byte "PLA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $68, $ff
+.byte "PLP", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $28, $ff
 ;     OPC    IMM  ZP   ZPX  ZPY, ABS  ABSX ABSY INDX INDY ACC  IMP  REL  
 .byte "ROL", $ff, $26, $36, $ff, $2e, $3e, $ff, $ff, $ff, $2a, $ff, $ff
+.byte "ROR", $ff, $66, $76, $ff, $6e, $7e, $ff, $ff, $ff, $6a, $ff, $ff
+.byte "RTI", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $40, $ff
 .byte "RTS", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $60, $ff
+.byte "SBC", $e9, $e5, $f5, $ff, $ed, $fd, $f9, $e1, $f1, $ff, $ff, $ff
+.byte "SEC", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $38, $ff
+.byte "SED", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $f8, $ff
+.byte "SEI", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $78, $ff
+.byte "STA", $ff, $85, $95, $ff, $8d, $9d, $99, $81, $91, $ff, $ff, $ff
+.byte "STX", $ff, $86, $ff, $96, $8e, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "STY", $ff, $84, $94, $ff, $8c, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "TAX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $aa, $ff
+.byte "TAY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $a8, $ff
+.byte "TSX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ba, $ff
+.byte "TXA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $8a, $ff
+.byte "TXS", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $9a, $ff
+.byte "TYA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $98, $ff
 .byte $00
 
+
+
+
+
+;; SPECIAL CASES -- JMP (IND)
 
 
 
