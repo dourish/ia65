@@ -99,12 +99,12 @@ continueline
   ;; found non-space character. start to decode. possibilities
   ;; are a comment, a directive, a label, or an instruction.
   ;;
-  cmp #';
-  beq crnextline    ; skip comments to end of line
+  cmp #";"	    ; skip comments to end of line
+  beq crnextline
 
-  cmp #'.
+  cmp #"."          ; period signals an assembler directive
   bne labelorop
-  jmp directive     ; process as an assembler directive
+  jmp directive
 
 labelorop
   ;; attempt to interpret it as an opcode first. look it up
@@ -775,6 +775,8 @@ copychar
   lda (SCRATCH+2),y
   beq copyspaces
   cmp #$20
+  beq copyspaces
+  cmp #":"          ; treat colon as end-of-label
   beq copyspaces
   sta (SCRATCH),y
   iny
