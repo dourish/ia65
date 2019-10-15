@@ -256,7 +256,7 @@ nonspace
   cmp #$ff          ; $ff signals no valid opcode for this mode
   bne done
 
-  lda #I_ACC        ; try accumulator mode
+  ldy #I_ACC        ; try accumulator mode
   lda (SCRATCH),y
   cmp #$ff
   bne done
