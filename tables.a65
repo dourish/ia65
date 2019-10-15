@@ -33,10 +33,11 @@ opcodes
 .byte "BCC", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $90
 .byte "BCS", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $b0
 .byte "BEQ", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $f0
-.byte "BIT", $ff, $24, $ff, $ff, $2c, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "BIT", $89, $24, $34, $ff, $2c, $3c, $ff, $ff, $ff, $ff, $ff, $ff
 .byte "BMI", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $30
 .byte "BNE", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $d0
 .byte "BPL", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $10
+.byte "BRA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $80
 .byte "BRK", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $00, $ff
 .byte "BVC", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $50
 .byte "BVS", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $70
@@ -48,11 +49,11 @@ opcodes
 .byte "CMP", $c9, $c5, $d5, $ff, $cd, $dd, $d9, $c1, $d1, $ff, $ff, $ff
 .byte "CPX", $e0, $e4, $ff, $ff, $ec, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 .byte "CPY", $c0, $c4, $ff, $ff, $cc, $ff, $ff, $ff, $ff, $ff, $ff, $ff
-.byte "DEC", $ff, $c6, $d6, $ff, $ce, $de, $ff, $ff, $ff, $ff, $3a, $ff
+.byte "DEC", $ff, $c6, $d6, $ff, $ce, $de, $ff, $ff, $ff, $3a, $ff, $ff
 .byte "DEX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ca, $ff
 .byte "DEY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $88, $ff
 .byte "EOR", $49, $45, $55, $ff, $4d, $5d, $59, $41, $51, $ff, $ff, $ff
-.byte "INC", $ff, $e6, $f6, $ff, $ee, $fe, $ff, $ff, $ff, $ff, $1a, $ff
+.byte "INC", $ff, $e6, $f6, $ff, $ee, $fe, $ff, $ff, $ff, $1a, $ff, $ff
 .byte "INX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $e8, $ff
 .byte "INY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $c8, $ff
 .byte "JMP", $ff, $ff, $ff, $ff, $4c, $ff, $ff, $6c, $ff, $ff, $ff, $ff
@@ -64,9 +65,12 @@ opcodes
 .byte "NOP", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ea, $ff
 .byte "ORA", $09, $05, $15, $ff, $0d, $1d, $19, $01, $11, $ff, $ff, $ff
 .byte "PHA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $48, $ff
-.byte "PHP", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $08, $ff
+.byte "PHX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $da, $ff
+.byte "PHY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $5a, $ff
 .byte "PLA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $68, $ff
 .byte "PLP", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $28, $ff
+.byte "PLX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $fa, $ff
+.byte "PLY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $7a, $ff
 ;     OPC    IMM  ZP   ZPX  ZPY, ABS  ABSX ABSY INDX INDY ACC  IMP  REL  
 .byte "ROL", $ff, $26, $36, $ff, $2e, $3e, $ff, $ff, $ff, $2a, $ff, $ff
 .byte "ROR", $ff, $66, $76, $ff, $6e, $7e, $ff, $ff, $ff, $6a, $ff, $ff
@@ -77,14 +81,19 @@ opcodes
 .byte "SED", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $f8, $ff
 .byte "SEI", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $78, $ff
 .byte "STA", $ff, $85, $95, $ff, $8d, $9d, $99, $81, $91, $ff, $ff, $ff
+.byte "STP", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $db, $ff
 .byte "STX", $ff, $86, $ff, $96, $8e, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 .byte "STY", $ff, $84, $94, $ff, $8c, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "STZ", $ff, $64, $74, $ff, $9c, $9e, $ff, $ff, $ff, $ff, $ff, $ff
 .byte "TAX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $aa, $ff
 .byte "TAY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $a8, $ff
+.byte "TRB", $ff, $14, $ff, $ff, $1c, $ff, $ff, $ff, $ff, $ff, $ff, $ff
+.byte "TSB", $ff, $04, $ff, $ff, $0c, $ff, $ff, $ff, $ff, $ff, $ff, $ff
 .byte "TSX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ba, $ff
 .byte "TXA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $8a, $ff
 .byte "TXS", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $9a, $ff
 .byte "TYA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $98, $ff
+.byte "WAI", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $cb, $ff
 .byte $00
 
 
