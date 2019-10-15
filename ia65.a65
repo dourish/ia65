@@ -745,13 +745,13 @@ equdir
   iny
   lda SCRATCH+13
   sta (LABELS),y
-  jsr padto25
-  lda SCRATCH+12
-  jsr putax
-  lda #$20
-  jsr puta
-  lda SCRATCH+13
-  jsr putax
+;  jsr padto25
+;  lda SCRATCH+12
+;  jsr putax
+;  lda #$20
+;  jsr puta
+;  lda SCRATCH+13
+;  jsr putax
   jmp crnextline
 
 
