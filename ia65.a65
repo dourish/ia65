@@ -19,11 +19,22 @@
 SCRATCH    = $0010  ; through to $001F
 PRINTVEC   = $0042  ; and $0043. for printing routine.
 INPUT      = $0200  ; block out mos of page for terminal input
-AMODE      = $02FF
-LINELEN    = $002E
-LINENO     = $002C  ; and 002D
-ORG        = $002A  ; and 002B
-LABELS     = $0028  ; and 0029
+
+;;; zero page variables. I use most of the locations below 0080
+;;; for other purposes. 0080 through 00FF are the FORTH stack,
+;;; which grows downwards, so nibbling space from off the bottom
+;;; of this space is the safest bet.
+LABELS     = $0080  ; and 0081
+
+AMODE      = $02E0
+LINELEN    = $02E1
+LINENO     = $02E2  ; and 02E3
+ORG        = $02E4  ; and 02E5
+OUT        = $02E6  ; and 02E7
+IN         = $02E8  ; and 02E0
+
+OUTBASE=$4000       ; file output area
+INBASE=$4800        ; file input area
 
   * = $0300
 
@@ -35,11 +46,14 @@ init_acia
   lda #%00011111    ; 1 stop bit, 8 data bits, 19200 baud
   sta ACIA_CONTROL
 
+  ;; issue startup message and initialize variables
+  ;;
   lda #<greeting    ; print the greeting
   sta PRINTVEC
   lda #>greeting
   sta PRINTVEC+1
   jsr printvecstr
+
   stz LINENO        ; zero out line count
   stz LINENO+1
   stz ORG           ; zero out assembly address
@@ -47,6 +61,14 @@ init_acia
   stz LABELS        ; initialize labels table pointer
   lda #$70          ; MSB of end of the labels table
   sta LABELS+1
+  lda #<OUTBASE     ; initialize OUT to OUTBASE
+  sta OUT
+  lda #>OUTBASE
+  sta OUT+1
+  lda #<INBASE      ; initialize IN to INBASE
+  sta IN
+  lda #>INBASE
+  sta IN+1
 
   ;; main loop -- read a line of text and interpret it as
   ;; a label, a comment, a directive, or a line of assembly
@@ -293,6 +315,7 @@ next
 proceed
   jsr readvalue     ; read value (either number or a label)
 
+temp
   ;; for relative mode, we need a relative address.
   ;; subtract ORG from the destination address, and then
   ;; adjust by 2 for the instruction we are assembling.
