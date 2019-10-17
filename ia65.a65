@@ -38,6 +38,7 @@ INBASE=$4800        ; file input area
 
   * = $0300
 
+#ifdef STANDALONE
 #include "../mitemon/init.a65"
 
 init_acia
@@ -45,6 +46,7 @@ init_acia
   sta ACIA_COMMAND
   lda #%00011111    ; 1 stop bit, 8 data bits, 19200 baud
   sta ACIA_CONTROL
+#endif
 
   ;; issue startup message and initialize variables
   ;;
