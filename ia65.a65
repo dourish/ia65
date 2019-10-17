@@ -596,6 +596,30 @@ end
   rts
 
 
+;; check that there is enough space for the code we're going
+;; to assemble (that is, at least three bytes). if not,
+;; flush data to file and reset output pointer
+checkspace
+  lda OUT+1
+  cmp #>IN-1        ; are we on the last available page?
+  beq checklower
+spaceokay
+  rts               ; no, so there is space. return.
+checklower
+  lda #$FC          ; last valid pointer
+  cmp OUT           ; check the lower byte
+  bpl spaceokay
+
+  ;; flush data BUG BUG BUG TO DO
+
+  ;; reset output pointer
+  lda #<OUTBASE
+  sta OUT
+  lda #>OUTBASE
+  sta OUT+1
+  rts
+
+
 ;;;
 ;;; handle assembler directives
 ;;;
