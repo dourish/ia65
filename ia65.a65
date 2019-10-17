@@ -25,13 +25,13 @@ INPUT      = $0200  ; block out mos of page for terminal input
 ;;; which grows downwards, so nibbling space from off the bottom
 ;;; of this space is the safest bet.
 LABELS     = $0080  ; and 0081
+OUT        = $0082  ; and 0083
+IN         = $0084  ; and 0085
 
 AMODE      = $02E0
 LINELEN    = $02E1
 LINENO     = $02E2  ; and 02E3
 ORG        = $02E4  ; and 02E5
-OUT        = $02E6  ; and 02E7
-IN         = $02E8  ; and 02E0
 
 OUTBASE=$4000       ; file output area
 INBASE=$4800        ; file input area
@@ -526,22 +526,40 @@ okay
 
 
 ;;;
-;;; output routines.
+;;; output routines. there are three routines, one for a
+;;; three-byte instruction, one for a two-byte and one for
+;;; a one-byte. Each of them does the same sequence of steps:
+;;;  - make sure that there is space in the output area
+;;;      for the instruction I'm about to write
+;;;  - print the opcode and store it in the output area
+;;;  - do the same for the operand bytes, if any
+;;;  - increment OUT and ORG appropriately
 ;;;
 
+;;; do the output for a three-byte instruction
 output3
-  jsr padto25
+  jsr checkspace    ; ensure space in output area
+  jsr padto25       ; move cursor
   ldy AMODE         ; load addressing mode into Y
   lda (SCRATCH),y   ; load opcode from table
+  pha               ; temporarily record opcode
   jsr putax         ; print opcode
+  ldy #0
+  pla               ; pull opcode
+  sta (OUT),y       ; store first byte in output area
   lda #$20
   jsr puta          ; print a space
-  lda SCRATCH+12    ; print lower byte
+  lda SCRATCH+12    ; load lower byte
+  iny
+  sta (OUT),y       ; store second byte in output area
   jsr putax
   lda #$20
   jsr puta          ; print a space
-  lda SCRATCH+13    ; print upper byte
-  jsr putax
+  lda SCRATCH+13    ; load upper byte
+  iny
+  sta (OUT),y       ; store third byte in output area
+  jsr putax         ; print it
+
 
 .(
   clc               ; increment code address pointer by 3
@@ -552,17 +570,34 @@ output3
   inc ORG+1
 skip
 .)
+.(
+  clc               ; increment output pointer by 3
+  lda OUT
+  adc #3
+  sta OUT
+  bcc skip
+  inc OUT+1
+skip
+.)
   jmp crnextline
 
+
+;; as above, but for a two-byte instruction
 output2
+  jsr checkspace
   jsr padto25
   ldy AMODE
   lda (SCRATCH),y
+
+  ldy #0
+  sta (OUT),y       ; store opcode
   jsr putax         ; print opcode
   lda #$20
   jsr puta
-  lda SCRATCH+12    ; print lower byte
-  jsr putax
+  lda SCRATCH+12    ; load lower byte/operand
+  iny
+  sta (OUT),y       ; store operand
+  jsr putax         ; print operand
 
 .(
   clc               ; increment code address pointer by 2
@@ -573,12 +608,24 @@ output2
   inc ORG+1
 skip
 .)
+.(
+  clc               ; increment output pointer by 2
+  lda OUT
+  adc #2
+  sta OUT
+  bcc skip
+  inc OUT+1
+skip
+.)
   jmp crnextline
 
+;; and again, only this time for a single-byte instruction
 output1
+  jsr checkspace
   jsr padto25
   ldy AMODE
   lda (SCRATCH),y
+  sta (OUT)
   jsr putax         ; print opcode
 
 .(
@@ -588,6 +635,15 @@ output1
   sta ORG
   bcc skip
   inc ORG+1
+skip
+.)
+.(
+  clc               ; increment output pointer by 1
+  lda OUT
+  adc #1
+  sta ORG
+  bcc skip
+  inc OUT+1
 skip
 .)
   jmp crnextline
@@ -601,7 +657,7 @@ end
 ;; flush data to file and reset output pointer
 checkspace
   lda OUT+1
-  cmp #>IN-1        ; are we on the last available page?
+  cmp #>INBASE-1        ; are we on the last available page?
   beq checklower
 spaceokay
   rts               ; no, so there is space. return.
