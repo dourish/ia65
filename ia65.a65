@@ -174,7 +174,7 @@ testopcode
 nextentry
   clc
   lda SCRATCH
-  adc #15           ; table entries are 15 bytes long
+  adc #16           ; table entries are 16 bytes long
   sta SCRATCH
 .(
   bcc skip
