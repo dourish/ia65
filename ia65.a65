@@ -498,8 +498,15 @@ zpindy
   cmp #$2c           ; comma?
   beq indy
 
-  ;; this is where (ZP) support should go but I don't
-  ;; have it yet BUG BUG BUG
+  ;; it's (ZP) 
+  ldy #I_IZP
+  sty AMODE
+  ;; make sure that there's a valid opcode here
+  lda (SCRATCH),y
+  cmp #$ff
+  beq zpinvalid
+  jmp output2
+zpinvalid
   jmp syntaxerror
 
 indy
