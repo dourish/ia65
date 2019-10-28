@@ -648,7 +648,7 @@ skip
   clc               ; increment output pointer by 1
   lda OUT
   adc #1
-  sta ORG
+  sta OUT
   bcc skip
   inc OUT+1
 skip
