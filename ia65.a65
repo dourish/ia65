@@ -1049,19 +1049,100 @@ endrd
 readytodump
 
   jsr crlf
+
+  ;; dump data, one row of 16 bytes at a time
+dumpnext16
+
+  ldy #0
+
+  ;; print one line
+
+  ;; print the address
   lda SCRATCH+11
   jsr putax
   lda SCRATCH+10
   jsr putax
+
+  ;; print separator
+  lda #$3a         ; colon
+  jsr puta
+  lda #$20         ; space
+  jsr puta
+
+  ;; print first eight bytes
+printbyte
+  lda (SCRATCH+10),y
+  jsr putax
   lda #$20
   jsr puta
-  lda SCRATCH+13
-  jsr putax
-  lda SCRATCH+12
-  jsr putax
-
-  jmp crnextline
+  cpy #$07          ; if at the eighth, print extra separator
+  bne nextbyte
+  jsr puta
+nextbyte            ; inc and move on to next byte
+  iny
+  cpy #$10          ; stop when we get to 16
+  bne printbyte
   
+  ;; print separator
+  lda #$20
+  jsr puta
+  jsr puta
+  lda #$7C          ; vertical bar
+  jsr puta          ; faster to have that as a little character string!
+
+  ;; print ascii values for 16 bytes
+  ldy #0
+nextascii
+  cpy #$10
+  beq endascii
+  lda (SCRATCH+10),y
+  ;; it's printable if it's over 32 and under 127
+  cmp #32
+  bmi unprintable
+  cmp #127
+  bmi printascii
+unprintable
+  lda #$2e          ; dot
+printascii
+  jsr puta
+  iny
+  bra nextascii
+endascii
+  lda #$7C          ; vertical bar
+  jsr puta          ; faster to have that as a little character string!
+  jsr crlf
+
+  ;; now bump the address and check if we should go around again
+  ;;
+  clc
+
+  ;; add 16 to the base
+  clc
+  lda SCRATCH+10
+  adc #$10
+  sta SCRATCH+10
+.(
+  bcc skip
+  inc SCRATCH+11
+skip
+.)
+
+  ;; compare to limit address
+  sec
+  lda SCRATCH+12
+  sbc SCRATCH+10
+  lda SCRATCH+13
+  sbc SCRATCH+11
+  bvc there
+  eor #$80
+there
+  bpl here
+  bra donedump
+here
+  jmp dumpnext16
+
+donedump
+  jmp nextline
   
 
 
