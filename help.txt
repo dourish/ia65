@@ -1,0 +1,30 @@
+Each line is a comment, a directive or an instruction.
+
+Comments begin with ; and continue to end of line
+
+Directives are signalled with a leading dot. Valid directives are
+.ORG address  -- sets assembly pointer to address
+.BYTE data    -- assembles a single byte of data
+.WORD data    -- assembles a two-byte word in big-endian format
+.EQU value    -- sets last defined label to value
+.DUMP range   -- range is of form 3000-30FF or "3000 FF" (start/count)
+
+An instruction is an optional label with an optional standard-format
+6502 instruction. These are valid:
+
+  LOOP1   CLC
+
+  INSERT  LDA ($500),Y
+  END     RTS
+
+A string that begins with a valid opcode is not valid as a label.
+
+Numbers are always hexadecimal. If a leading $ is given, it is
+ignored. Labels may be used anywhere a number is given, e.g.
+  SPACE .EQU 20
+  LDA #SPACE
+
+
+
+
+
