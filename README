@@ -4,7 +4,7 @@ hosted assembler to run on the Mite board itself.
 
 Current state:
 
-  * all NMOS 6502 opcodes supported
+  * all NMOS 6502 and most CMOS 65C02 opcodes supported
   * .ORG, .EQU, .BYTE, .WORD directives supported
   * labels up to 14 characters (but no forward references)
   * all numbers in hexadecimal
@@ -20,6 +20,7 @@ So this should work, for example:
     LDY #10
   LOOP
     JSR PRCH       ; print character
-    INC            ; ok, that's a 65C02 opcode!
+    INC
     DEY
     BNE LOOP
+
