@@ -20,6 +20,75 @@ I_IMP=13
 I_REL=14
 I_IZP=15
 
+;;; Row indices into opcode table (used by the disassembler)
+;;;
+O_ADC=0
+O_AND=1
+O_ASL=2
+O_BCC=3
+O_BCS=4
+O_BEQ=5
+O_BIT=6
+O_BMI=7
+O_BNE=8
+O_BPL=9
+O_BRA=10
+O_BRK=11
+O_BVC=12
+O_BVS=13
+O_CLC=14
+O_CLD=15
+O_CLI=16
+O_CLV=17
+O_CMP=18
+O_CPX=19
+O_CPY=20
+O_DEC=21
+O_DEX=22
+O_DEY=23
+O_EOR=24
+O_INC=25
+O_INX=26
+O_INY=27
+O_JMP=28
+O_JSR=29
+O_LDA=30
+O_LDX=31
+O_LDY=32
+O_LSR=33
+O_NOP=34
+O_ORA=35
+O_PHA=36
+O_PHX=37
+O_PHY=38
+O_PLA=39
+O_PLP=40
+O_PLX=41
+O_PLY=42
+O_ROL=43
+O_ROR=44
+O_RTI=45
+O_RTS=46
+O_SBC=47
+O_SEC=48
+O_SED=49
+O_SEI=50
+O_STA=51
+O_STP=52
+O_STX=53
+O_STY=54
+O_STZ=55
+O_TAX=56
+O_TAY=57
+O_TRB=58
+O_TSB=59
+O_TSX=60
+O_TXA=61
+O_TXS=62
+O_TYA=63
+O_WAI=64
+
+
 ;;; Opcode table. 16 bytes per instruction, which comprise three
 ;;; bytes of the opcode itself and then 13 bytes for the instructions
 ;;; for each addressing mode, or $FF when there is none.
@@ -109,6 +178,8 @@ dirtable
 .word equdir
 .byte 4, "DUMP"
 .word dumpdir
+.byte 4, "TEST"
+.word testdir
 .byte $00
 
 

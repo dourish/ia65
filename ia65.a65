@@ -1143,9 +1143,17 @@ here
 
 donedump
   jmp nextline
-  
 
 
+
+;;; implements .TEST -- used for various debugging purposes
+testdir
+  jsr read16hex
+  lda #$20
+  jsr puta
+  ldy SCRATCH+12
+  jsr propcode
+  jmp crnextline
 
 
 ;;;
@@ -1218,6 +1226,42 @@ space
 .)
   rts
 
+;; print the opcode indicated by the Y register. nukes SCRATCH/+1
+propcode
+  ;; turn opcode into a two-byte value
+  sty SCRATCH
+  stz SCRATCH+1
+
+  ;; multiply it by 16 (length of a row in the opcode table).
+  asl SCRATCH
+  rol SCRATCH+1
+  asl SCRATCH
+  rol SCRATCH+1
+  asl SCRATCH
+  rol SCRATCH+1
+  asl SCRATCH
+  rol SCRATCH+1
+
+  ;; add that to the opcode table base
+  clc
+  lda SCRATCH
+  adc #<opcodes
+  sta SCRATCH
+  lda SCRATCH+1
+  adc #>opcodes
+  sta SCRATCH+1
+
+  ldy #0
+  lda (SCRATCH),y
+  jsr puta
+  iny
+  lda (SCRATCH),y
+  jsr puta
+  iny
+  lda (SCRATCH),y
+  jsr puta
+
+  rts
 
 
 greeting:	 .byte "Interactive Assembler for Mite 6502", $0d, $0a, $00
