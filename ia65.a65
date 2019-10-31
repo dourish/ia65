@@ -970,7 +970,106 @@ foundlabel
 nomorelabels
   jmp read16hex     ; rts from there
 
+
+;; implement .DUMP. read the parameter either as a range (1000-10ff) or
+;; as a pair that indicate start and extend (e.g. 1000 ff).
+dumpdir
+
+  ;; read the address
+  jsr read16hex
+
+  ;; cache the address we just read
+  lda SCRATCH+12
+  sta SCRATCH+10
+  lda SCRATCH+13
+  sta SCRATCH+11
+
+  ;; check for range, which is signalled by a hyphen
+  lda (SCRATCH+14)
+  cmp #"-
+  bne readcount
+
+  clc
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+.(
+bcc skip
+  inc SCRATCH+15
+skip
+.)
+  ;; read next value as limit
+  jsr read16hex
+  bra readytodump
+
+readcount
+  ;; read next value as count. first, skip leading space
+  ldy #0
+skipspace
+  lda (SCRATCH+14),y
+  beq endrd
+  cmp #$20
+  beq gotspace
+  cmp #$09
+  beq gotspace
+  bra notspace
+gotspace
+  iny
+  bra skipspace
+notspace
+  clc
+  tya
+  adc SCRATCH+14
+  sta SCRATCH+14
+.(
+  bcc skip
+  inc SCRATCH+15
+skip
+.)
+  ;; read a count
+  jsr read16hex
+
+  ;; calculate end of range and leave in S+12/13
+  clc
+  lda SCRATCH+10
+  adc SCRATCH+12
+  sta SCRATCH+12
+  lda SCRATCH+11
+  adc SCRATCH+13
+  sta SCRATCH+13
+  bra readytodump
+
+endrd
+  ;; read ended early. set end marker to same value as start.
+  lda SCRATCH+10
+  sta SCRATCH+12
+  lda SCRATCH+11
+  sta SCRATCH+13
+
+readytodump
+
+  jsr crlf
+  lda SCRATCH+11
+  jsr putax
+  lda SCRATCH+10
+  jsr putax
+  lda #$20
+  jsr puta
+  lda SCRATCH+13
+  jsr putax
+  lda SCRATCH+12
+  jsr putax
+
+  jmp crnextline
+  
+  
+
+
+
+
+;;;
 ;;; errors
+;;;
 
 syntaxerror
   jsr crlf

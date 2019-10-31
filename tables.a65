@@ -107,6 +107,8 @@ dirtable
 .word worddir
 .byte 3, "EQU"
 .word equdir
+.byte 4, "DUMP"
+.word dumpdir
 .byte $00
 
 

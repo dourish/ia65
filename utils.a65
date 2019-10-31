@@ -206,6 +206,8 @@ skip
   beq endread
   cmp #$29              ; close paren. specifically for the assembler
   beq endread
+  cmp #$2d              ; hyphen. specifically for the assembler
+  beq endread
   bra continue
 endread
   jmp endafter1
@@ -308,6 +310,8 @@ skip
   cmp #$2c              ; comma. specifically for the assembler
   beq endafter3
   cmp #$29              ; close paren. specifically for the assembler
+  beq endafter3
+  cmp #$2d              ; hyphen. specifically for the assembler
   beq endafter3
 
 .(
