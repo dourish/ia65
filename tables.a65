@@ -212,7 +212,7 @@ cc00adtable
   .word dimm, dzp, err, dabs, err, dzpx, err, dabsx
 
 branchoptable
-  .word BPLstr, BMIstr, BVCstr, BVSstr, BCCstr, BCSstr, BNEstr, BEQstr
+  .word O_BPL, O_BMI, O_BVC, O_BVS, O_BCC, O_BCS, O_BNE, O_BEQ
 
 single08table
   .word PHPstr, CLCstr, PLPstr, SECstr, PHAstr, CLIstr, PLAstr, SEIstr

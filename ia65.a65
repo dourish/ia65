@@ -1126,6 +1126,9 @@ foundspecial
 endspecial          ; got to the end of the table without a match
   lda (BASE),y      ; re-load instruction
   
+  ;; it's not a special case, so now start to move through the
+  ;; different instruction formats. Each has a table with details.
+  ;;
   and #%00011111    ; checking if it's a branch
   cmp #%00010000
   beq jbranch       ; jump to code for branches
@@ -1331,7 +1334,7 @@ dabs
   dey               ; then the less-significant byte
   lda (BASE),y
   jsr putax
-  iny
+  iny               ; reset Y so that we move on correctly
   jmp endline
 
 dizpy
@@ -1634,25 +1637,26 @@ branch
   tax
 
   ;; now index into table
-  ; so now branchoptable,x is the pointer to the right string
+  ; so now branchoptable,x is the pointer to the right opcode
   lda branchoptable,x
-  sta SCRATCH
-  lda branchoptable+1,x
-  sta SCRATCH+1
-  phy
-  ; print the three characters pointed to there
-  ldy #0
-  lda (SCRATCH),y   ; first character...
-  jsr puta          ; print it
-  iny
-  lda (SCRATCH),y   ; second character...
-  jsr puta          ; print it
-  iny
-  lda (SCRATCH),y   ; third character...
-  jsr puta          ; print it
+  jsr propcode
+;  sta SCRATCH
+;  lda branchoptable+1,x
+;  sta SCRATCH+1
+;  phy
+;  ; print the three characters pointed to there
+;  ldy #0
+;  lda (SCRATCH),y   ; first character...
+;  jsr puta          ; print it
+;  iny
+;  lda (SCRATCH),y   ; second character...
+;  jsr puta          ; print it
+;  iny
+;  lda (SCRATCH),y   ; third character...
+;  jsr puta          ; print it
   lda #$20          ; print a space
   jsr puta
-  ply
+;  ply
 
   ;; we use a variant form of immediate mode to print the operand
   ;; for branch instructions
@@ -1731,7 +1735,7 @@ others
   jsr puta
   jmp endline
 
-;; special cases go here
+;; disassembler special cases go here
 ;;
 dobrk
   lda #O_BRK
@@ -1761,114 +1765,70 @@ dobra
   jmp dimmb
 
 dotrbzp
-  lda #'T
-  jsr puta
-  lda #'R
-  jsr puta
-  lda #'B
-  jsr puta
+  lda #O_TRB
+  jsr propcode
   lda #$20
   jsr puta
   jmp dzp
 
 dotrbabs
-  lda #'T
-  jsr puta
-  lda #'R
-  jsr puta
-  lda #'B
-  jsr puta
+  lda #O_TRB
+  jsr propcode
   lda #$20
   jsr puta
   jmp dabs
 
 dostzzp
-  lda #'S
-  jsr puta
-  lda #'T
-  jsr puta
-  lda #'Z
-  jsr puta
+  lda #O_STZ
+  jsr propcode
   lda #$20
   jsr puta
   jmp dzp
 
 dostzabs
-  lda #'S
-  jsr puta
-  lda #'T
-  jsr puta
-  lda #'Z
-  jsr puta
+  lda #O_STZ
+  jsr propcode
   lda #$20
   jsr puta
   jmp dabs
 
 dostzzpx
-  lda #'S
-  jsr puta
-  lda #'T
-  jsr puta
-  lda #'Z
-  jsr puta
+  lda #O_STZ
+  jsr propcode
   lda #$20
   jsr puta
   jmp dzpx
 
 dostzabsx
-  lda #'S
-  jsr puta
-  lda #'T
-  jsr puta
-  lda #'Z
-  jsr puta
+  lda #O_STZ
+  jsr propcode
   lda #$20
   jsr puta
   jmp dabsx
 
 doplx
-  lda #'P
-  jsr puta
-  lda #'L
-  jsr puta
-  lda #'X
-  jsr puta
+  lda #O_PLX
+  jsr propcode
   jmp endline
 
 dophx
-  lda #'P
-  jsr puta
-  lda #'H
-  jsr puta
-  lda #'X
-  jsr puta
+  lda #O_PHX
+  jsr propcode
   jmp endline
 
 doply
-  lda #'P
-  jsr puta
-  lda #'L
-  jsr puta
-  lda #'Y
-  jsr puta
+  lda #O_PLY
+  jsr propcode
   jmp endline
 
 dophy
-  lda #'P
-  jsr puta
-  lda #'H
-  jsr puta
-  lda #'Y
-  jsr puta
+  lda #O_PHY
+  jsr propcode
   jmp endline
 
 doinca
-  lda #'I
-  jsr puta
-  lda #'N
-  jsr puta
-  lda #'C
-  jsr puta
+  lda #O_INC
+  jsr propcode
   lda #$20
   jsr puta
   lda #'A
@@ -1876,18 +1836,13 @@ doinca
   jmp endline
 
 dodeca
-  lda #'I
-  jsr puta
-  lda #'N
-  jsr puta
-  lda #'C
-  jsr puta
+  lda #O_DEC
+  jsr propcode
   lda #$20
   jsr puta
   lda #'A
   jsr puta
   jmp endline
-
 
 endline
   jsr crlf
