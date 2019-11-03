@@ -167,6 +167,9 @@ opcodes
 .byte $00
 
 
+;;;
+;;; dirtable holds pointers to the code handlers for directives
+;;;
 dirtable
 .byte 3, "ORG"
 .word orgdir
@@ -178,14 +181,145 @@ dirtable
 .word equdir
 .byte 4, "DUMP"
 .word dumpdir
+.byte 3, "DIS"
+.word disdir
 .byte 4, "TEST"
 .word testdir
 .byte $00
 
 
-
-
 ;; SPECIAL CASES -- JMP (IND)
+
+
+;;;
+;;; Disassembler tables
+;;;
+
+cc01optable
+  .word ORAstr, ANDstr, EORstr, ADCstr, STAstr, LDAstr, CMPstr, SBCstr
+cc01adtable
+  .word dizpx, dzp, dimm, dabs, dizpy, dzpx, dabsy, dabsx
+
+cc10optable
+  .word ASLstr, ROLstr, LSRstr, RORstr, STXstr, LDXstr, DECstr, INCstr
+cc10adtable
+  .word dimm, dzp, dacc, dabs, dizp, dzpx, err, dabsx
+
+cc00optable
+  ;; yes, JMP appears here twice... it's not a mistake...
+  .word TSBstr, BITstr, JMPstr, JMPstr, STYstr, LDYstr, CPYstr, CPXstr
+cc00adtable
+  .word dimm, dzp, err, dabs, err, dzpx, err, dabsx
+
+branchoptable
+  .word BPLstr, BMIstr, BVCstr, BVSstr, BCCstr, BCSstr, BNEstr, BEQstr
+
+single08table
+  .word PHPstr, CLCstr, PLPstr, SECstr, PHAstr, CLIstr, PLAstr, SEIstr
+  .word DEYstr, TYAstr, TAYstr, CLVstr, INYstr, CLDstr, INXstr, SEDstr
+
+singlexatable
+  .word TXAstr, TXSstr, TAXstr, TSXstr, DEXstr, PHXstr, NOPstr, PLXstr
+
+specialcasetable
+  .byte $00
+  .word dobrk
+  .byte $20
+  .word dojsr
+  .byte $40
+  .word dorti
+  .byte $60
+  .word dorts
+  .byte $80
+  .word dobra
+  .byte $14
+  .word dotrbzp
+  .byte $1C
+  .word dotrbabs
+  .byte $64
+  .word dostzzp
+  .byte $9C
+  .word dostzabs
+  .byte $74
+  .word dostzzpx
+  .byte $9E
+  .word dostzabsx
+  .byte $1A
+  .word doinca
+  .byte $3A
+  .word dodeca
+  .byte $5A
+  .word dophy
+  .byte $7A
+  .word doply
+  .byte $DA
+  .word dophx
+  .byte $FA
+  .word doplx
+  .byte $FF
+  .word $FFFF
+
+
+ORAstr .byte "ORA"
+ANDstr .byte "AND"
+EORstr .byte "EOR"
+ADCstr .byte "ADC"
+STAstr .byte "STA"
+LDAstr .byte "LDA"
+CMPstr .byte "CMP"
+SBCstr .byte "SBC"
+ASLstr .byte "ASL"
+ROLstr .byte "ROL"
+LSRstr .byte "LSR"
+RORstr .byte "ROR"
+STXstr .byte "STX"
+LDXstr .byte "LDX"
+DECstr .byte "DEC"
+INCstr .byte "INC"
+NONstr .byte "???"
+BITstr .byte "BIT"
+JMPstr .byte "JMP"
+STYstr .byte "STY"
+LDYstr .byte "LDY"
+CPYstr .byte "CPY"
+CPXstr .byte "CPX"
+BPLstr .byte "BPL"
+BMIstr .byte "BMI"
+BVCstr .byte "BVC"
+BVSstr .byte "BVS"
+BCCstr .byte "BCC"
+BCSstr .byte "BCS"
+BNEstr .byte "BNE"
+BEQstr .byte "BEQ"
+PHPstr .byte "PHP"
+CLCstr .byte "CLC"
+PLPstr .byte "PLP"
+SECstr .byte "SEC"
+PHAstr .byte "PHA"
+CLIstr .byte "CLI"
+PLAstr .byte "PLA"
+SEIstr .byte "SEI"
+DEYstr .byte "DEY"
+TYAstr .byte "TYA"
+TAYstr .byte "TAY"
+CLVstr .byte "CLV"
+INYstr .byte "INY"
+CLDstr .byte "CLD"
+INXstr .byte "INX"
+SEDstr .byte "SED"
+
+TXAstr .byte "TXA"
+TXSstr .byte "TXS"
+TAXstr .byte "TAX"
+TSXstr .byte "TSX"
+DEXstr .byte "DEX"
+NOPstr .byte "NOP"
+
+PLXstr .byte "PLA"
+PHXstr .byte "PHX"
+TSBstr .byte "TSB"
+
+errstr .byte "???"
 
 
 
