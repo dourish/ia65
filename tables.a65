@@ -202,13 +202,15 @@ cc01adtable
   .word dizpx, dzp, dimm, dabs, dizpy, dzpx, dabsy, dabsx
 
 cc10optable
-  .word ASLstr, ROLstr, LSRstr, RORstr, STXstr, LDXstr, DECstr, INCstr
+;  .word ASLstr, ROLstr, LSRstr, RORstr, STXstr, LDXstr, DECstr, INCstr
+  .word O_ASL, O_ROL, O_LSR, O_ROR, O_STX, O_LDX, O_DEC, O_INC
 cc10adtable
   .word dimm, dzp, dacc, dabs, dizp, dzpx, err, dabsx
 
 cc00optable
   ;; yes, JMP appears here twice... it's not a mistake...
-  .word TSBstr, BITstr, JMPstr, JMPstr, STYstr, LDYstr, CPYstr, CPXstr
+;  .word TSBstr, BITstr, JMPstr, JMPstr, STYstr, LDYstr, CPYstr, CPXstr
+  .word O_TSB, O_BIT, O_JMP, O_JMP, O_STY, O_LDY, O_CPY, O_CPX
 cc00adtable
   .word dimm, dzp, err, dabs, err, dzpx, err, dabsx
 
