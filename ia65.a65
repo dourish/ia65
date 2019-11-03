@@ -1181,25 +1181,11 @@ branch01
   lsr               ; result is the aaa code * 2, ...
   lsr               ; ... the better to use as index into opcode table
   tax
-  ; so now cc01optable,x is the pointer to the right string
+  ; so now cc01optable,x is the pointer to the right opcode
   lda cc01optable,x
-  sta SCRATCH
-  lda cc01optable+1,x
-  sta SCRATCH+1
-  phy
-  ; print the three characters pointed to there
-  ldy #0
-  lda (SCRATCH),y   ; first character...
-  jsr puta          ; print it
-  iny
-  lda (SCRATCH),y   ; second character...
-  jsr puta          ; print it
-  iny
-  lda (SCRATCH),y   ; third character...
-  jsr puta          ; print it
-  lda #$20          ; print a space
+  jsr propcode
+  lda #$20
   jsr puta
-  ply
   
   ;; handle each addressing mode
   ;; the addressing mode is going to determine how many

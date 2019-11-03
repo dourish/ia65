@@ -196,7 +196,8 @@ dirtable
 ;;;
 
 cc01optable
-  .word ORAstr, ANDstr, EORstr, ADCstr, STAstr, LDAstr, CMPstr, SBCstr
+;  .word ORAstr, ANDstr, EORstr, ADCstr, STAstr, LDAstr, CMPstr, SBCstr
+  .word O_ORA, O_AND, O_EOR, O_ADC, O_STA, O_LDA, O_CMP, O_SBC
 cc01adtable
   .word dizpx, dzp, dimm, dabs, dizpy, dzpx, dabsy, dabsx
 
