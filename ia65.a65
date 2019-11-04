@@ -1184,8 +1184,6 @@ branch01
   ; so now cc01optable,x is the pointer to the right opcode
   lda cc01optable,x
   jsr propcode
-  lda #$20
-  jsr puta
   
   ;; handle each addressing mode
   ;; the addressing mode is going to determine how many
@@ -1477,8 +1475,6 @@ specialb10
 
 b10opcode
   jsr propcode
-  lda #$20
-  jsr puta
 
 ;; handle each addressing mode
   ;;
@@ -1533,8 +1529,6 @@ branch00
   ; so now cc00optable,x is the pointer to the right opcode
   lda cc00optable,x
   jsr propcode
-  lda #$20
-  jsr puta
 
   ;; handle each addressing mode
   ;;
@@ -1595,23 +1589,6 @@ branch
   ; so now branchoptable,x is the pointer to the right opcode
   lda branchoptable,x
   jsr propcode
-;  sta SCRATCH
-;  lda branchoptable+1,x
-;  sta SCRATCH+1
-;  phy
-;  ; print the three characters pointed to there
-;  ldy #0
-;  lda (SCRATCH),y   ; first character...
-;  jsr puta          ; print it
-;  iny
-;  lda (SCRATCH),y   ; second character...
-;  jsr puta          ; print it
-;  iny
-;  lda (SCRATCH),y   ; third character...
-;  jsr puta          ; print it
-  lda #$20          ; print a space
-  jsr puta
-;  ply
 
   ;; we use a variant form of immediate mode to print the operand
   ;; for branch instructions
@@ -1628,25 +1605,9 @@ single8
   tax
 
   ;; now index into table
-  ;; so now single08table,x is the pointer to the right string
+  ;; so now single08table,x is the pointer to the right opcode
   lda single08table,x
-  sta SCRATCH
-  lda single08table+1,x
-  sta SCRATCH+1
-  phy
-  ; print the three characters pointed to there
-  ldy #0
-  lda (SCRATCH),y   ; first character...
-  jsr puta          ; print it
-  iny
-  lda (SCRATCH),y   ; second character...
-  jsr puta          ; print it
-  iny
-  lda (SCRATCH),y   ; third character...
-  jsr puta          ; print it
-  lda #$20          ; print a space
-  jsr puta
-  ply
+  jsr propcode
   jmp endline
 
 ;;; these are the single-byte instructions at 8A, 9A, etc.
@@ -1660,25 +1621,9 @@ singlexa
   tax
 
   ;; now index into table
-  ;; so now singlexatable,x is the pointer to the right string
+  ;; so now singlexatable,x is the pointer to the right opcode
   lda singlexatable,x
-  sta SCRATCH
-  lda singlexatable+1,x
-  sta SCRATCH+1
-  phy
-  ; print the three characters pointed to there
-  ldy #0
-  lda (SCRATCH),y   ; first character...
-  jsr puta          ; print it
-  iny
-  lda (SCRATCH),y   ; second character...
-  jsr puta          ; print it
-  iny
-  lda (SCRATCH),y   ; third character...
-  jsr puta          ; print it
-  lda #$20          ; print a space
-  jsr puta
-  ply
+  jsr propcode
   jmp endline
 
 ;;; this is where we end up if we haven't figured anything else out
@@ -1700,8 +1645,6 @@ dobrk
 dojsr
   lda #O_JSR
   jsr propcode
-  lda #$20
-  jsr puta
   jmp dabs
 
 dorti
@@ -1722,43 +1665,31 @@ dobra
 dotrbzp
   lda #O_TRB
   jsr propcode
-  lda #$20
-  jsr puta
   jmp dzp
 
 dotrbabs
   lda #O_TRB
   jsr propcode
-  lda #$20
-  jsr puta
   jmp dabs
 
 dostzzp
   lda #O_STZ
   jsr propcode
-  lda #$20
-  jsr puta
   jmp dzp
 
 dostzabs
   lda #O_STZ
   jsr propcode
-  lda #$20
-  jsr puta
   jmp dabs
 
 dostzzpx
   lda #O_STZ
   jsr propcode
-  lda #$20
-  jsr puta
   jmp dzpx
 
 dostzabsx
   lda #O_STZ
   jsr propcode
-  lda #$20
-  jsr puta
   jmp dabsx
 
 doplx
@@ -1784,8 +1715,6 @@ dophy
 doinca
   lda #O_INC
   jsr propcode
-  lda #$20
-  jsr puta
   lda #'A
   jsr puta
   jmp endline
@@ -1793,8 +1722,6 @@ doinca
 dodeca
   lda #O_DEC
   jsr propcode
-  lda #$20
-  jsr puta
   lda #'A
   jsr puta
   jmp endline
@@ -2030,7 +1957,8 @@ space
 .)
   rts
 
-;; print the opcode indicated by the Y register. nukes SCRATCH/+1
+;; print the opcode indicated by the Y register. nukes SCRATCH/+1.
+;; includes a trailing space.
 propcode
   ;; turn opcode into a two-byte value
   sta SCRATCH
@@ -2064,6 +1992,8 @@ propcode
   jsr puta
   iny
   lda (SCRATCH),y
+  jsr puta
+  lda #$20
   jsr puta
   ply
 

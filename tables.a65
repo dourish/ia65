@@ -59,34 +59,35 @@ O_LSR=33
 O_NOP=34
 O_ORA=35
 O_PHA=36
-O_PHX=37
-O_PHY=38
-O_PLA=39
-O_PLP=40
-O_PLX=41
-O_PLY=42
-O_ROL=43
-O_ROR=44
-O_RTI=45
-O_RTS=46
-O_SBC=47
-O_SEC=48
-O_SED=49
-O_SEI=50
-O_STA=51
-O_STP=52
-O_STX=53
-O_STY=54
-O_STZ=55
-O_TAX=56
-O_TAY=57
-O_TRB=58
-O_TSB=59
-O_TSX=60
-O_TXA=61
-O_TXS=62
-O_TYA=63
-O_WAI=64
+O_PHP=37
+O_PHX=38
+O_PHY=39
+O_PLA=40
+O_PLP=41
+O_PLX=42
+O_PLY=43
+O_ROL=44
+O_ROR=45
+O_RTI=46
+O_RTS=47
+O_SBC=48
+O_SEC=49
+O_SED=50
+O_SEI=51
+O_STA=52
+O_STP=53
+O_STX=54
+O_STY=55
+O_STZ=56
+O_TAX=57
+O_TAY=58
+O_TRB=59
+O_TSB=60
+O_TSX=61
+O_TXA=62
+O_TXS=63
+O_TYA=64
+O_WAI=65
 
 
 ;;; Opcode table. 16 bytes per instruction, which comprise three
@@ -134,6 +135,7 @@ opcodes
 .byte "NOP", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ea, $ff, $ff
 .byte "ORA", $09, $05, $15, $ff, $0d, $1d, $19, $01, $11, $ff, $ff, $ff, $12
 .byte "PHA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $48, $ff, $ff
+.byte "PHP", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $08, $ff, $ff
 .byte "PHX", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $da, $ff, $ff
 .byte "PHY", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $5a, $ff, $ff
 .byte "PLA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $68, $ff, $ff
@@ -164,7 +166,7 @@ opcodes
 .byte "TXS", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $9a, $ff, $ff
 .byte "TYA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $98, $ff, $ff
 .byte "WAI", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $cb, $ff, $ff
-.byte $00
+.byte $00, $00, $00, $00, $00, $00
 
 
 ;;;
@@ -218,11 +220,13 @@ branchoptable
   .word O_BPL, O_BMI, O_BVC, O_BVS, O_BCC, O_BCS, O_BNE, O_BEQ
 
 single08table
-  .word PHPstr, CLCstr, PLPstr, SECstr, PHAstr, CLIstr, PLAstr, SEIstr
-  .word DEYstr, TYAstr, TAYstr, CLVstr, INYstr, CLDstr, INXstr, SEDstr
+;  .word PHPstr, CLCstr, PLPstr, SECstr, PHAstr, CLIstr, PLAstr, SEIstr
+  .word O_PHP, O_CLC, O_PLP, O_SEC, O_PHA, O_CLI, O_PLA, O_SEI
+;  .word DEYstr, TYAstr, TAYstr, CLVstr, INYstr, CLDstr, INXstr, SEDstr
+  .word O_DEY, O_TYA, O_TAY, O_CLV, O_INY, O_CLD, O_INX, O_SED
 
 singlexatable
-  .word TXAstr, TXSstr, TAXstr, TSXstr, DEXstr, PHXstr, NOPstr, PLXstr
+  .word O_TXA, O_TXS, O_TAX, O_TSX, O_DEX, O_PHX, O_NOP, O_PLX
 
 specialcasetable
   .byte $00
@@ -262,65 +266,6 @@ specialcasetable
   .byte $FF
   .word $FFFF
 
-
-ORAstr .byte "ORA"
-ANDstr .byte "AND"
-EORstr .byte "EOR"
-ADCstr .byte "ADC"
-STAstr .byte "STA"
-LDAstr .byte "LDA"
-CMPstr .byte "CMP"
-SBCstr .byte "SBC"
-ASLstr .byte "ASL"
-ROLstr .byte "ROL"
-LSRstr .byte "LSR"
-RORstr .byte "ROR"
-STXstr .byte "STX"
-LDXstr .byte "LDX"
-DECstr .byte "DEC"
-INCstr .byte "INC"
-NONstr .byte "???"
-BITstr .byte "BIT"
-JMPstr .byte "JMP"
-STYstr .byte "STY"
-LDYstr .byte "LDY"
-CPYstr .byte "CPY"
-CPXstr .byte "CPX"
-BPLstr .byte "BPL"
-BMIstr .byte "BMI"
-BVCstr .byte "BVC"
-BVSstr .byte "BVS"
-BCCstr .byte "BCC"
-BCSstr .byte "BCS"
-BNEstr .byte "BNE"
-BEQstr .byte "BEQ"
-PHPstr .byte "PHP"
-CLCstr .byte "CLC"
-PLPstr .byte "PLP"
-SECstr .byte "SEC"
-PHAstr .byte "PHA"
-CLIstr .byte "CLI"
-PLAstr .byte "PLA"
-SEIstr .byte "SEI"
-DEYstr .byte "DEY"
-TYAstr .byte "TYA"
-TAYstr .byte "TAY"
-CLVstr .byte "CLV"
-INYstr .byte "INY"
-CLDstr .byte "CLD"
-INXstr .byte "INX"
-SEDstr .byte "SED"
-
-TXAstr .byte "TXA"
-TXSstr .byte "TXS"
-TAXstr .byte "TAX"
-TSXstr .byte "TSX"
-DEXstr .byte "DEX"
-NOPstr .byte "NOP"
-
-PLXstr .byte "PLA"
-PHXstr .byte "PHX"
-TSBstr .byte "TSB"
 
 errstr .byte "???"
 
