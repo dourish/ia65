@@ -24,3 +24,10 @@ So this should work, for example:
     DEY
     BNE LOOP
 
+
+What's missing?
+
+  * there is no expression evaluator. So you can't say anything like
+       STA ADDR+1
+  * single-pass with no resolution of undefined labels
+

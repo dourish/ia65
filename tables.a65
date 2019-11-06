@@ -166,7 +166,8 @@ opcodes
 .byte "TXS", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $9a, $ff, $ff
 .byte "TYA", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $98, $ff, $ff
 .byte "WAI", $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $ff, $cb, $ff, $ff
-.byte $00, $00, $00, $00, $00, $00
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $00
 
 
 ;;;

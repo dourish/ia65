@@ -48,6 +48,12 @@ init_acia
   sta ACIA_CONTROL
 #endif
 
+;;;
+;;;
+;;; SECTION 1 -- STARTUP AND MAIN LOOP
+;;;
+;;;
+
   ;; issue startup message and initialize variables
   ;;
   lda #<greeting    ; print the greeting
@@ -74,26 +80,26 @@ init_acia
 
   ;; main loop -- read a line of text and interpret it as
   ;; a label, a comment, a directive, or a line of assembly
-  ;; language program
+  ;; language code.
   ;;
 crnextline
   jsr crlf
 
 nextline
-  lda ORG+1         ; print current address as a prompt
+  lda ORG+1         ; print current address (ORG) as a prompt
   jsr putax
   lda ORG
   jsr putax
-  lda #$20
+  lda #$20          ; then a couple of spaces
   jsr puta
   jsr puta
 
   jsr readline      ; read a line to INPUT
-  lda #0            ; terminate with a NUL
+  lda #0            ; terminate with a NULL
   sta INPUT,y
   sty LINELEN       ; cache line length
 
-  clc               ; increment line number by 1
+  clc               ; bump line count by 1 for error reporting
   lda LINENO
   adc #1
   sta LINENO
@@ -103,7 +109,7 @@ nextline
 skip
 .)
 
-  ;; find first non-space character
+  ;; find first non-space character on line
   ldy #0
 .(
 nextchar
@@ -148,6 +154,8 @@ labelorop
   sta SCRATCH+3 
 
 testopcode
+  ;; test if current opcode table pointer is a match
+  ;;
   lda (SCRATCH)     ; zero indicates end-of-table
   beq endoftable
 
@@ -230,12 +238,20 @@ nomoretext
   jmp crnextline
 
 
+;;;
+;;;
+;;; SECTION 2 -- INSTRUCTION DECODING
+;;;
+;;;
+
+
 ;; we have found a match in the opcode table. now we need to
 ;; decode the operand text, which will also give us the addressing
 ;; mode.
 ;;
 foundmatch
-  ;; skip over opcode text
+  ;; skip over opcode text. opcodes are always 3 characters long,
+  ;; so just add 3.
   clc
   lda SCRATCH+2
   adc #3
@@ -246,7 +262,7 @@ foundmatch
 skip
 .)
 
-  ;; skip spaces to find operand
+  ;; now skip over spaces to find operand
   ldy #0
 .(
 nextchar
@@ -269,12 +285,13 @@ nonspace
   adc #0
   sta SCRATCH+3
 
-  ;; if we found no operand, then it's implied or accumulator mode,
-  ;; depending on the instruction. test for each.
 .(
   lda (SCRATCH+2)
-  bne next
+  bne next          ; non-zero, so there is an operand present
 
+  ;; if we found no operand, then the addressing mode is either
+  ;; implied or accumulator, depending on the instruction. test for each.
+  ;;
   ldy #I_IMP        ; does implied mode work?
   lda (SCRATCH),y
   cmp #$ff          ; $ff signals no valid opcode for this mode
@@ -301,7 +318,7 @@ next
 .(
   ldy #I_REL
   lda (SCRATCH),y
-  cmp #$ff
+  cmp #$ff          ; $FF indicates an invalid mode for opcode
   beq next
 
   ;; set up text pointer to read the operand
@@ -354,7 +371,7 @@ next
 .(
   lda (SCRATCH+2)
   cmp #"#
-  bne next2
+  bne next2         ; if not immediate, skip to next test
 
 immediate
   clc
@@ -418,8 +435,8 @@ nonparen
   lda (SCRATCH),y
   cmp #$ff
   beq absx          ; default to absx if there is no zpx opcode
-
   jmp output2
+
 absx
   ldy #I_ABSX
   sty AMODE
@@ -496,12 +513,12 @@ zpindy
   ldy #1
   lda (SCRATCH+14),y
   cmp #$2c           ; comma?
-  beq indy
+  beq indy           ; yes, so it's (zp),y
 
-  ;; it's (ZP) 
+  ;; no comma, so it's (ZP) 
   ldy #I_IZP
   sty AMODE
-  ;; make sure that there's a valid opcode here
+  ;; make sure that there's a valid opcode for thhis
   lda (SCRATCH),y
   cmp #$ff
   beq zpinvalid
@@ -684,7 +701,9 @@ checklower
 
 
 ;;;
-;;; handle assembler directives
+;;;
+;;; SECTION 3 -- ASSEMBLER DIRECTIVES
+;;;
 ;;;
 
 directive
@@ -846,7 +865,7 @@ skip
 .)
   jmp crnextline
 
-;; implement .EQU, setting value of last label
+;;; implement .EQU, setting value of last label
 equdir
   ;; read the address
   jsr read16hex
@@ -860,8 +879,8 @@ equdir
   jmp crnextline
 
 
-;; implement .DUMP. read the parameter either as a range (1000-10ff) or
-;; as a pair that indicate start and extend (e.g. 1000 ff).
+;;; implement .DUMP. read the parameter either as a range (1000-10ff) or
+;;; as a pair that indicate start and extend (e.g. 1000 ff).
 dumpdir
 
   ;; get range parameters
@@ -963,6 +982,9 @@ donedump
   jmp nextline
 
 
+;;; read parameters to directives to get a range of addresses. read
+;;; either start-end or start offset.
+;;; BUG BUG BUG should this accept labels?
 getrange
   ;; read the address
   jsr read16hex
@@ -1050,7 +1072,9 @@ testdir
 
 
 ;;;
-;;; disassembler
+;;;
+;;; SECTION 4 -- DISASSEMBLER
+;;;
 ;;;
 
 disdir
@@ -1066,16 +1090,6 @@ BASE=SCRATCH+$0A
 LIMIT=SCRATCH+12
 
   jmp begindis
-
-derror
-  lda #<diserrorstring
-  sta PRINTVEC
-  lda #>diserrorstring
-  sta PRINTVEC+1
-  jsr printvecstr
-
-enddis
-  jmp exitdis
 
 ;;; I'm following details and logic from
 ;;; http://www.llx.com/~nparker/a2/opcodes.html
@@ -1778,15 +1792,13 @@ exitdis
   
 
 
-
-
-
 ;;;
-;;; routines for the label table
 ;;;
-;;; the labels table grows downward from $7000
-;;; all entries are 16 bytes long -- 14 padded with zeros for the
-;;; label and two for the value
+;;; SECTION 5 -- LABEL HANDLING
+;;;
+;;; The labels table grows downward from $7000. All entries are
+;;; 16 bytes long -- 14 padded with zeros for the label and two
+;;; for the value
 ;;;
 
 addlabel
@@ -1800,26 +1812,27 @@ addlabel
 
   ldy #0
 copychar
-  lda (SCRATCH+2),y
-  beq copyspaces
-  cmp #$20
+  lda (SCRATCH+2),y ; load label character
+  beq copyspaces    ; check for NULL
+  cmp #$20          ; check for space
   beq copyspaces
   cmp #":"          ; treat colon as end-of-label
   beq copyspaces
-  sta (SCRATCH),y
+  sta (SCRATCH),y   ; store label character
   iny
-  cpy #14
+  cpy #14           ; max characters?
   bne copychar
   lda #32
 copyspaces
   cpy #14
   beq endcopy
   lda #0
-  sta (SCRATCH),y
+  sta (SCRATCH),y   ; pad with NULLs
   iny
   bra copyspaces
 endcopy
-
+  ;; by the time we get here, Y is always set to 14, so it
+  ;; points to the address field in the label's entry in table.
   ;; by default, set value to current address
   lda ORG
   sta (SCRATCH),y
@@ -1888,7 +1901,9 @@ nomorelabels
 
 
 ;;;
-;;; errors
+;;;
+;;; SECTION 6 -- ERROR HANDLING
+;;;
 ;;;
 
 syntaxerror
@@ -1932,6 +1947,12 @@ error
 
 
 
+;;;
+;;;
+;;; SECTION 7 -- UTILITY FUNCTIONS
+;;;
+;;;
+
 
 padto25
 .(
@@ -1957,8 +1978,8 @@ space
 .)
   rts
 
-;; print the opcode indicated by the Y register. nukes SCRATCH/+1.
-;; includes a trailing space.
+;; print the opcode indicated by the A register, plus trailing space.
+;;; nukes SCRATCH/+1.
 propcode
   ;; turn opcode into a two-byte value
   sta SCRATCH
