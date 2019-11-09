@@ -32,6 +32,8 @@ AMODE      = $02E0
 LINELEN    = $02E1
 LINENO     = $02E2  ; and 02E3
 ORG        = $02E4  ; and 02E5
+PREFIX     = $02E6
+INFIX      = $02E7
 
 OUTBASE=$4000       ; file output area
 INBASE=$4800        ; file input area
@@ -1848,13 +1850,21 @@ endcopy
 
   rts
 
+
+
+;;;
+;;;
+;;; SECTION 6 -- VALUES AND EXPRESSIONS
+;;;
+;;;
+
 ;; readvalue reads a value, which may be a label (in which case, it
 ;; substitutes the value of that label), or it may be an 8- or
-;; 16-bit word. the input pointer is SCRATCH+14 and the value is
-;; returned in SCRATCH+12.
+;; 16-bit word. on input, the input pointer is SCRATCH+14 and the value
+;; is returned in SCRATCH+12.
 readvalue
 
-  ;; start with most recent label
+  ;; initialiae label table pointer
   lda LABELS
   sta SCRATCH+4
   lda LABELS+1
@@ -1888,6 +1898,18 @@ skip
   bra testlabel
 
 foundlabel
+  ;; first, update the text pointer
+  clc
+  tya
+  adc SCRATCH+14
+  sta SCRATCH+14
+.(
+  bcc skip
+  inc SCRATCH+15
+skip
+.)
+
+  ;; now set value to return from the label table value
   ldy #14
   lda (SCRATCH+4),y
   sta SCRATCH+12
@@ -1900,9 +1922,100 @@ nomorelabels
   jmp read16hex     ; rts from there
 
 
+;;; read expressions. this isn't a full expression-evaluator, by
+;;; any means, but we can read and process simple prefix operators
+;;; (<, >) and recognize basic arithmetic operators, although with
+;;; no precedence handling.
+;;;   on entry, SCRATCH+14/15 is the input pointer, and on exit,
+;;;  it is updated and S+12/13 is the result (as with value and
+;;; number reading functions).
+readexpr
+  stz PREFIX        ; by default, no prefix operator
+
+  ;; is the first character one of our operators?
+  lda (SCRATCH+14)
+prop1
+  cmp #"<
+  bne prop2
+  lda #OP_LOWER
+  sta PREFIX
+  bra forwendprefix
+prop2
+  cmp #">
+  bne prop3
+  lda #OP_UPPER
+  sta PREFIX
+  bra forwendprefix
+prop3
+  bra endprefix
+forwendprefix
+  ;; move text pointer forward
+  clc
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+.(
+bcc skip
+  inc SCRATCH+15
+skip
+.)
+  endprefix
+
+  ;; now read a value as usual
+  jsr readvalue
+
+  ;; check for a trailing arithmetic operator
+  lda (SCRATCH+14)
+inop1
+  cmp #"+
+  bne inop2
+  lda #OP_PLUS
+  sta INFIX
+  bra forwendinfix
+inop2
+  cmp #"-
+  bne inop3
+  lda #OP_MINUS
+  sta INFIX
+  bra forwendinfix
+inop3
+  cmp #"*
+  bne inop4
+  lda #OP_MULT
+  sta INFIX
+  bra forwendinfix
+inop4
+  cmp #"/
+  bne inop5
+  lda #OP_DIV
+  sta INFIX
+  bra forwendinfix
+inop5
+  bra noinfix
+forwendinfix
+  ;; move text pointer forward
+  clc
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+.(
+bcc skip
+  inc SCRATCH+15
+skip
+.)
+
+  ;; save current value
+  ;; read a value
+  ;; do the calculation
+  ;; loop to see if we need to do more
+
+noinfix
+  rts
+
+
 ;;;
 ;;;
-;;; SECTION 6 -- ERROR HANDLING
+;;; SECTION 7 -- ERROR HANDLING
 ;;;
 ;;;
 
@@ -1949,7 +2062,7 @@ error
 
 ;;;
 ;;;
-;;; SECTION 7 -- UTILITY FUNCTIONS
+;;; SECTION 8 -- UTILITY FUNCTIONS
 ;;;
 ;;;
 

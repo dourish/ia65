@@ -268,7 +268,9 @@ specialcasetable
   .word $FFFF
 
 
-errstr .byte "???"
-
-
-
+OP_LOWER=1
+OP_UPPER=2
+OP_PLUS=3
+OP_MINUS=4
+OP_MULT=5
+OP_DIV=6
