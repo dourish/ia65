@@ -24,10 +24,14 @@ So this should work, for example:
     DEY
     BNE LOOP
 
+Simple expressions are supported. > and < are prefix operators
+selecting the upper and lower bytes of a word, respectively, and
++ and - can be used on operand values. No multiplication, division,
+negation, bitwise operations, or shifts.
+
 
 What's missing?
-
-  * there is no expression evaluator. So you can't say anything like
-       STA ADDR+1
+  * bitwise operations
+  * decimal and binary values
   * single-pass with no resolution of undefined labels
 
