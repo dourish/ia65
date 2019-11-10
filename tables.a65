@@ -186,6 +186,8 @@ dirtable
 .word dumpdir
 .byte 3, "DIS"
 .word disdir
+.byte 4, "EVAL"
+.word evaldir
 .byte 4, "TEST"
 .word testdir
 .byte $00
@@ -199,20 +201,17 @@ dirtable
 ;;;
 
 cc01optable
-;  .word ORAstr, ANDstr, EORstr, ADCstr, STAstr, LDAstr, CMPstr, SBCstr
   .word O_ORA, O_AND, O_EOR, O_ADC, O_STA, O_LDA, O_CMP, O_SBC
 cc01adtable
   .word dizpx, dzp, dimm, dabs, dizpy, dzpx, dabsy, dabsx
 
 cc10optable
-;  .word ASLstr, ROLstr, LSRstr, RORstr, STXstr, LDXstr, DECstr, INCstr
   .word O_ASL, O_ROL, O_LSR, O_ROR, O_STX, O_LDX, O_DEC, O_INC
 cc10adtable
   .word dimm, dzp, dacc, dabs, dizp, dzpx, err, dabsx
 
 cc00optable
   ;; yes, JMP appears here twice... it's not a mistake...
-;  .word TSBstr, BITstr, JMPstr, JMPstr, STYstr, LDYstr, CPYstr, CPXstr
   .word O_TSB, O_BIT, O_JMP, O_JMP, O_STY, O_LDY, O_CPY, O_CPX
 cc00adtable
   .word dimm, dzp, err, dabs, err, dzpx, err, dabsx
@@ -221,9 +220,7 @@ branchoptable
   .word O_BPL, O_BMI, O_BVC, O_BVS, O_BCC, O_BCS, O_BNE, O_BEQ
 
 single08table
-;  .word PHPstr, CLCstr, PLPstr, SECstr, PHAstr, CLIstr, PLAstr, SEIstr
   .word O_PHP, O_CLC, O_PLP, O_SEC, O_PHA, O_CLI, O_PLA, O_SEI
-;  .word DEYstr, TYAstr, TAYstr, CLVstr, INYstr, CLDstr, INXstr, SEDstr
   .word O_DEY, O_TYA, O_TAY, O_CLV, O_INY, O_CLD, O_INX, O_SED
 
 singlexatable
@@ -268,9 +265,3 @@ specialcasetable
   .word $FFFF
 
 
-OP_LOWER=1
-OP_UPPER=2
-OP_PLUS=3
-OP_MINUS=4
-OP_MULT=5
-OP_DIV=6

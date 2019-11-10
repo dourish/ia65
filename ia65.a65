@@ -874,7 +874,8 @@ skip
 ;;; implement .EQU, setting value of last label
 equdir
   ;; read the address
-  jsr read16hex
+;  jsr read16hex
+  jsr readexpr
 
   ldy #14
   lda SCRATCH+12
@@ -1067,8 +1068,8 @@ gotrange
   rts
 
 
-;;; implements .TEST -- used for various debugging purposes
-testdir
+;;; implements .EVAL -- interactively evaluate expressions
+evaldir
   jsr readexpr
   lda #$20
   jsr puta
@@ -1076,6 +1077,10 @@ testdir
   jsr putax
   lda SCRATCH+12
   jsr putax
+  jmp crnextline
+
+;;; implements .TEST -- used for various debugging purposes
+testdir
   jmp crnextline
 
 
@@ -1946,7 +1951,8 @@ readexpr
   stz PREFIX        ; by default, no prefix operator
   stz INFIX         ; or infix
 
-  ;; is the first character one of our operators?
+  ;; is the first character one of the prefix operators? if so,
+  ;; record it in PREFIX.
   lda (SCRATCH+14)
 prop1
   cmp #"<
@@ -1959,6 +1965,11 @@ prop2
   sta PREFIX
   bra forwendprefix
 prop3
+  cmp #"!
+  bne prop4
+  sta PREFIX
+  bra forwendprefix
+prop4
   bra endprefix
 forwendprefix
   ;; move text pointer forward
@@ -1995,11 +2006,24 @@ next
   beq doneprefix
 next
 .)
+.(
+  cmp #"!
+  bne next
+  lda SCRATCH+12
+  eor #$ff
+  sta SCRATCH+12
+  lda SCRATCH+13
+  eor #$ff
+  sta SCRATCH+13
+  beq doneprefix
+next
+.)
 doneprefix
-  
+  stz PREFIX        ; reset it in case we loop  
 
 testinfix
-  ;; check for a trailing arithmetic operator
+  ;; check for a trailing arithmetic operator or
+  ;; exit if none
   lda (SCRATCH+14)
 inop1
   cmp #"+
@@ -2012,6 +2036,16 @@ inop2
   sta INFIX
   bra forwendinfix
 inop3
+  cmp #"&
+  bne inop4
+  sta INFIX
+  bra forwendinfix
+inop4
+  cmp #"|
+  bne inop5
+  sta INFIX
+  bra forwendinfix
+inop5
   bra noinfix
 forwendinfix
   ;; move text pointer forward
@@ -2062,10 +2096,35 @@ next
   bra doneinfix
 next
 .)
+.(
+  cmp #"&
+  bne next
+  pla
+  and SCRATCH+12
+  sta SCRATCH+12
+  pla
+  and SCRATCH+13
+  sta SCRATCH+13
+  bra doneinfix
+next
+.)
+.(
+  cmp #"|
+  bne next
+  pla
+  ora SCRATCH+12
+  sta SCRATCH+12
+  pla
+  ora SCRATCH+13
+  sta SCRATCH+13
+  bra doneinfix
+next
+.)
   
 doneinfix
   ;; loop to see if we need to do more
-
+  jmp testinfix
+  
 noinfix
   rts
 

@@ -204,6 +204,8 @@ skip
   beq endread
   cmp #$30
   bmi endread
+  cmp #$67
+  bpl endread
   cmp #$2c              ; comma. specifically for the assembler
   beq endread
   cmp #$29              ; close paren. specifically for the assembler
@@ -260,6 +262,8 @@ skip
   beq endread
   cmp #$30
   bmi endread
+  cmp #$67
+  bpl endread
   cmp #$2c              ; comma. specifically for the assembler
   beq endread
   cmp #$29              ; close paren. specifically for the assembler
@@ -313,6 +317,8 @@ skip
   beq endafter3
   cmp #$30
   bmi endafter3
+  cmp #$67
+  bpl endafter3
   cmp #$2c              ; comma. specifically for the assembler
   beq endafter3
   cmp #$29              ; close paren. specifically for the assembler

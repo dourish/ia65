@@ -26,12 +26,12 @@ So this should work, for example:
 
 Simple expressions are supported. > and < are prefix operators
 selecting the upper and lower bytes of a word, respectively, and
-+ and - can be used on operand values. No multiplication, division,
-negation, bitwise operations, or shifts.
+! is a prefix negation. &, |, + and - can be used on operand values.
+No multiplication, division, or shifts. Operators are evaluated
+left-to-right with no precedence.
 
 
 What's missing?
-  * bitwise operations
   * decimal and binary values
   * single-pass with no resolution of undefined labels
 
