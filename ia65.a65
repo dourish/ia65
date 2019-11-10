@@ -334,7 +334,8 @@ next
   jmp syntaxerror   ; syntax error if there is no operand provided
 
 proceed
-  jsr readvalue     ; read value (either number or a label)
+;;  jsr readvalue     ; read value (either number or a label)
+  jsr readexpr     ; read value (either number or a label)
 
 temp
   ;; for relative mode, we need a relative address.
@@ -383,7 +384,8 @@ immediate
   lda SCRATCH+3
   adc #0
   sta SCRATCH+15
-  jsr readvalue
+;  jsr readvalue
+  jsr readexpr
 
   lda SCRATCH+13    ; any data in the top byte implies an overflow
   beq continue
@@ -414,7 +416,8 @@ nonparen
   sta SCRATCH+14
   lda SCRATCH+3
   sta SCRATCH+15
-  jsr readvalue
+;  jsr readvalue
+  jsr readexpr
 
   ;; is there a trailing comma after the operand?
   lda (SCRATCH+14)
@@ -498,7 +501,8 @@ parenmodes
   sta SCRATCH+15
 
 ;;  jsr read16hex     ; read the address
-  jsr readvalue
+;;  jsr readvalue
+  jsr readexpr
 
   ;; is the next character a comma?
   lda (SCRATCH+14)
@@ -1065,11 +1069,13 @@ gotrange
 
 ;;; implements .TEST -- used for various debugging purposes
 testdir
-  jsr read16hex
+  jsr readexpr
   lda #$20
   jsr puta
+  lda SCRATCH+13
+  jsr putax
   lda SCRATCH+12
-  jsr propcode
+  jsr putax
   jmp crnextline
 
 
@@ -1864,23 +1870,30 @@ endcopy
 ;; is returned in SCRATCH+12.
 readvalue
 
-  ;; initialiae label table pointer
+  ;; start off by trying to test the current text against
+  ;; each entry in the label table. if that fails, try to read
+  ;; it as a number.
+
+  ;; initialize label table pointer
   lda LABELS
   sta SCRATCH+4
   lda LABELS+1
   sta SCRATCH+5
 
 testlabel
+  ;; first, check if we have run off the end of the label table
   lda SCRATCH+5
   cmp #$70          ; if we move onto this page, table is ended
   beq nomorelabels
+
+  ;; otherwise, test label at current pointer
   ldy #0
 labelchar
   lda (SCRATCH+4),y
-  beq foundlabel    ; end of label
+  beq foundlabel    ; end of label and we still match
   cmp (SCRATCH+14),y
-  bne nextlabel
-  iny
+  bne nextlabel     ; didn't match, so move on to next label
+  iny               ; move to next character
   cpy #14           ; stop if we reach the end
   beq foundlabel
   bra labelchar
@@ -1931,19 +1944,18 @@ nomorelabels
 ;;; number reading functions).
 readexpr
   stz PREFIX        ; by default, no prefix operator
+  stz INFIX         ; or infix
 
   ;; is the first character one of our operators?
   lda (SCRATCH+14)
 prop1
   cmp #"<
   bne prop2
-  lda #OP_LOWER
   sta PREFIX
   bra forwendprefix
 prop2
   cmp #">
   bne prop3
-  lda #OP_UPPER
   sta PREFIX
   bra forwendprefix
 prop3
@@ -1964,33 +1976,42 @@ skip
   ;; now read a value as usual
   jsr readvalue
 
+  ;; handle prefix operators before we handle infix
+  lda PREFIX
+  beq testinfix
+.(
+  cmp #"<
+  bne next
+  stz SCRATCH+13
+  beq doneprefix
+next
+.)
+.(
+  cmp #">
+  bne next
+  lda SCRATCH+13
+  sta SCRATCH+12
+  stz SCRATCH+13
+  beq doneprefix
+next
+.)
+doneprefix
+  
+
+testinfix
   ;; check for a trailing arithmetic operator
   lda (SCRATCH+14)
 inop1
   cmp #"+
   bne inop2
-  lda #OP_PLUS
   sta INFIX
   bra forwendinfix
 inop2
   cmp #"-
   bne inop3
-  lda #OP_MINUS
   sta INFIX
   bra forwendinfix
 inop3
-  cmp #"*
-  bne inop4
-  lda #OP_MULT
-  sta INFIX
-  bra forwendinfix
-inop4
-  cmp #"/
-  bne inop5
-  lda #OP_DIV
-  sta INFIX
-  bra forwendinfix
-inop5
   bra noinfix
 forwendinfix
   ;; move text pointer forward
@@ -2005,8 +2026,44 @@ skip
 .)
 
   ;; save current value
+  lda SCRATCH+13
+  pha
+  lda SCRATCH+12
+  pha
   ;; read a value
+  jsr readvalue
+
   ;; do the calculation
+  lda INFIX
+  beq noinfix
+.(
+  cmp #"+
+  bne next
+  clc
+  pla
+  adc SCRATCH+12
+  sta SCRATCH+12
+  pla
+  adc SCRATCH+13
+  sta SCRATCH+13
+  bra doneinfix
+next
+.)
+.(
+  cmp #"-
+  bne next
+  sec
+  pla
+  sbc SCRATCH+12
+  sta SCRATCH+12
+  pla
+  sbc SCRATCH+13
+  sta SCRATCH+13
+  bra doneinfix
+next
+.)
+  
+doneinfix
   ;; loop to see if we need to do more
 
 noinfix

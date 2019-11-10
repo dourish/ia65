@@ -202,6 +202,8 @@ skip
 .(
   lda (SCRATCH+14)      ; second nybble
   beq endread
+  cmp #$30
+  bmi endread
   cmp #$2c              ; comma. specifically for the assembler
   beq endread
   cmp #$29              ; close paren. specifically for the assembler
@@ -256,6 +258,8 @@ skip
 .(
   lda (SCRATCH+14)      ; third nybble
   beq endread
+  cmp #$30
+  bmi endread
   cmp #$2c              ; comma. specifically for the assembler
   beq endread
   cmp #$29              ; close paren. specifically for the assembler
@@ -307,6 +311,8 @@ skip
 
   lda (SCRATCH+14)      ; fourth nybble
   beq endafter3
+  cmp #$30
+  bmi endafter3
   cmp #$2c              ; comma. specifically for the assembler
   beq endafter3
   cmp #$29              ; close paren. specifically for the assembler
