@@ -24,6 +24,8 @@ So this should work, for example:
     DEY
     BNE LOOP
 
+As a special case, the format "LABEL=value" is also recognised.
+
 Simple expressions are supported. > and < are prefix operators
 selecting the upper and lower bytes of a word, respectively, and
 ! is a prefix negation. &, |, + and - can be used on operand values.

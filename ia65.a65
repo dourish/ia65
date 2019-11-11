@@ -972,6 +972,7 @@ skip
 .)
 
   ;; compare to limit address
+.(
   sec
   lda SCRATCH+12
   sbc SCRATCH+10
@@ -984,6 +985,7 @@ there
   bra donedump
 here
   jmp dumpnext16
+.)
 
 donedump
   jmp nextline
@@ -1102,18 +1104,16 @@ disdir
 BASE=SCRATCH+$0A
 LIMIT=SCRATCH+12
 
-  jmp begindis
-
-;;; I'm following details and logic from
+;;; 
+;;; To decode instructions, I'm following details and logic from
 ;;; http://www.llx.com/~nparker/a2/opcodes.html
 ;;;
 ;;; Most instructions are of the form aaabbbcc, where cc signals
-;;; a block of instructons that operate in a similar way, with aaa
+;;; a block of instructions that operate in a similar way, with aaa
 ;;; indicating the instructoon and bbb indicating the addressing mode.
 ;;; Each of those blocks is handled by two tables, one of which
-;;; indicates the opcode strings and one of which handles the
-;;; addressing modes (by storing entry points into the processing
-;;; routines).
+;;; indicates the opcode and one of which handles the addressing
+;;; modes (by storing entry points into the processing routines).
 ;;;
 
 begindis
@@ -1122,6 +1122,21 @@ begindis
 
 start
 nextinst
+  ;; test if we have hit the end of the requested range
+.(
+sec
+  lda LIMIT
+  sbc BASE
+  lda LIMIT+1
+  sbc BASE+1
+  bvc there
+  eor #$80
+there
+  bpl here
+  jmp finishdis
+here
+.)
+
   ;; start the line by printing the address and a couple of spaces
   ;;
   lda BASE+1
@@ -1756,9 +1771,6 @@ dodeca
 endline
   jsr crlf
 
-  ;; TEMP TEMP TEMP JUST STOP
-  jmp nextline
-
   ;; at this point, Y points to the last processed byte. Increment
   ;; to move on, and add it to base.
   iny
@@ -1771,37 +1783,12 @@ endline
   sta BASE+1        ; high byte
   ldy #0            ; reset Y
 
-  ;; compare to limit address
-  sec
-  lda SCRATCH+12
-  sbc SCRATCH+10
-  lda SCRATCH+13
-  sbc SCRATCH+11
-;  bvc there
-;  eor #$80
-;there
-;  bpl here
-;  bra donedis
-;here
-;  jmp nextdis ;????
-
-donedis
-  jmp nextline
-
-  ;; test if we should terminate... goes here...
-;  dec COUNT
-  beq finishdis
-
   jmp nextinst
 
 finishdis
   plx               ; restore the stack pointer
 exitdis
-;  inx               ; pop one item off stack (one param)
-;  inx
-;  inx               ; pop second item off stack (other param)
-;  inx
-  jmp nextline
+  jmp nextline      ; return to main loop
   
 
 
@@ -1831,6 +1818,8 @@ copychar
   beq copyspaces
   cmp #":"          ; treat colon as end-of-label
   beq copyspaces
+  cmp #"="          ; treat equals as a special case
+  beq assignment
   sta (SCRATCH),y   ; store label character
   iny
   cpy #14           ; max characters?
@@ -1852,7 +1841,58 @@ endcopy
   iny
   lda ORG+1
   sta (SCRATCH),y
+  bra endaddlabel
 
+  ;; copy spaces, but then handle the equals sign. before we start,
+  ;; though, update SCRATCH+14 to point to character after the equals.
+  ;; it's messy and a result of a switchover I made in the text pointer
+  ;; address...
+assignment
+  clc
+  tya
+  adc SCRATCH+2
+  sta SCRATCH+14
+  lda SCRATCH+3
+  adc #0
+  sta SCRATCH+15
+copyspaceseq
+  cpy #14
+  beq endcopyeq
+  lda #0
+  sta (SCRATCH),y   ; pad with NULLs
+  iny
+  bra copyspaceseq
+endcopyeq
+  ;; by the time we get here, Y is always set to 14, so it
+  ;; points to the address field in the label's entry in table.
+  phy               ; push Y to preserve it
+;  lda SCRATCH       ; and push SCRATCH and SCRATCH+1
+;  pha
+;  lda SCRATCH+1
+;  pha
+  clc               ; add 1 to SCRATCH+14 to move text pointer
+  lda SCRATCH+14    ; past the = sign
+  adc #1
+  sta SCRATCH+14
+.(
+bcc skip
+  inc SCRATCH+15
+skip
+.)
+  jsr readexpr      ; get an expression
+afterread
+;  pla               ; pull SCRATCH and SCRATCH+1 again
+;  sta SCRATCH+1
+;  pla
+;  sta SCRATCH
+  ply               ; retreive Y again
+  lda SCRATCH+12    ; store the expression value in the
+  sta (SCRATCH),y   ; label's value field
+  iny
+  lda SCRATCH+13
+  sta (SCRATCH),y
+
+endaddlabel
   ;; update LABELS
   lda SCRATCH
   sta LABELS
@@ -1875,6 +1915,16 @@ endcopy
 ;; is returned in SCRATCH+12.
 readvalue
 
+  ;; if the first character is a number, just jump straight to
+  ;; number-processing and don't try to interpret it as a label
+  lda (SCRATCH+14)
+  cmp #"9
+  bpl trylabel
+  cmp #"0
+  bmi trylabel
+  bra nomorelabels  
+
+trylabel
   ;; start off by trying to test the current text against
   ;; each entry in the label table. if that fails, try to read
   ;; it as a number.
