@@ -1083,6 +1083,10 @@ evaldir
 
 ;;; implements .TEST -- used for various debugging purposes
 testdir
+  jsr readvalue
+  lda #$4c          ; JMP instruction
+  sta SCRATCH+11
+  jsr SCRATCH+11    ; essentially an indirect JSR (SCRATCH+12)
   jmp crnextline
 
 
