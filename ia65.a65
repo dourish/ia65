@@ -827,13 +827,17 @@ orgdir
 
 ;;; implement .BYTE, writing a single byte into the stream
 bytedir
-  ;; read the address
+  jsr padto25
+readnext
+  ;; read the value
   jsr read16hex
   lda SCRATCH+13
   bne msb
-  jsr padto25
+
   lda SCRATCH+12
   jsr putax
+  lda #$20
+  jsr puta
   clc
   lda ORG
   adc #1
@@ -843,6 +847,20 @@ bytedir
   inc ORG+1
 skip
 .)
+  lda (SCRATCH+14)
+  cmp #",
+  bne finishdir
+  clc
+  lda SCRATCH+14
+  adc #1
+  sta SCRATCH+14
+.(
+  bcc skip
+  inc SCRATCH+15
+skip
+.)
+  bra readnext
+finishdir
   jmp crnextline
 
 msb
