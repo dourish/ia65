@@ -427,6 +427,7 @@ nonparen
   ;; found a comma, so it's an indexed mode... which index register?
   ldy #1
   lda (SCRATCH+14),y
+  and #%11011111    ; adjust case for case-independent matching
   cmp #"Y
   beq indexy        ; for Y index
 
@@ -835,9 +836,12 @@ readnext
   bne msb
 
   lda SCRATCH+12
+  sta (OUT)
   jsr putax
   lda #$20
   jsr puta
+
+  ;; advance both ORG and OUT pointers
   clc
   lda ORG
   adc #1
@@ -847,9 +851,22 @@ readnext
   inc ORG+1
 skip
 .)
+  clc
+  lda OUT
+  adc #1
+  sta OUT
+.(
+  bcc skip
+  inc OUT+1
+skip
+.)
+
+  ;; check to see if there's another byte to process
   lda (SCRATCH+14)
   cmp #",
   bne finishdir
+
+  ;; yes, so advance text pointer and loop
   clc
   lda SCRATCH+14
   adc #1
